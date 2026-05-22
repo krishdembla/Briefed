@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
   const emails = users.map((u: { email: string }) => u.email).filter(Boolean);
 
   const { data: sendData, error: sendError } = await resend.emails.send({
-    from: "Briefed <digest@briefed.app>",
+    from: "Briefed <digest@briefed.com>",
     to: emails,
     subject: "Your world this morning",
     html,
