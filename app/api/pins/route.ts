@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/db/supabase";
 
-// Returns geo-tagged, AI-processed pins from the last 48 hours.
-// 48h window ensures the map is populated even if the pipeline runs at varying times.
+// Returns geo-tagged, AI-processed pins from the last 7 days.
+// Wide window keeps the map populated across topics with lower posting frequency (e.g. climate).
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const hours = Math.min(parseInt(searchParams.get("hours") ?? "48"), 168); // cap at 7 days
+  const hours = Math.min(parseInt(searchParams.get("hours") ?? "168"), 168); // cap at 7 days
 
   const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 

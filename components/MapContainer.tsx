@@ -39,6 +39,7 @@ export default function MapContainer() {
   const [activeTopic, setActiveTopic] = useState<TopicFilter>("all");
   const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
   const [readPins, setReadPins] = useState<Set<string>>(new Set());
+  const [hideRead, setHideRead] = useState(false);
 
   // Fetch pins from the API route
   useEffect(() => {
@@ -71,11 +72,15 @@ export default function MapContainer() {
     });
   };
 
-  // Filter pins by topic, then convert to GeoJSON
+  // Filter pins by topic + hideRead, then convert to GeoJSON with isRead flag
   const geojson = useMemo<FeatureCollection<Point>>(() => {
-    const filtered = activeTopic === "all"
+    let filtered = activeTopic === "all"
       ? pins
       : pins.filter((p) => p.topic === activeTopic);
+
+    if (hideRead) {
+      filtered = filtered.filter((p) => !readPins.has(p.id));
+    }
 
     return {
       type: "FeatureCollection",
@@ -83,10 +88,10 @@ export default function MapContainer() {
         type: "Feature",
         geometry: { type: "Point", coordinates: [pin.lng, pin.lat] },
         // All properties must be primitives — GeoJSON spec requirement
-        properties: { ...pin },
+        properties: { ...pin, isRead: readPins.has(pin.id) },
       })),
     };
-  }, [pins, activeTopic]);
+  }, [pins, activeTopic, readPins, hideRead]);
 
   const readCount = readPins.size;
 
@@ -94,7 +99,7 @@ export default function MapContainer() {
     <div className="relative w-full h-screen bg-zinc-950">
       {/* Map */}
       {!loading && !error && (
-        <BriefedMap geojson={geojson} onPinClick={setSelectedPin} />
+        <BriefedMap geojson={geojson} onPinClick={setSelectedPin} readPins={readPins} />
       )}
 
       {/* Loading state */}
@@ -112,7 +117,13 @@ export default function MapContainer() {
       )}
 
       {/* Topic filter — overlaid at top */}
-      <TopicFilter_Component active={activeTopic} onChange={(t) => { setActiveTopic(t); setSelectedPin(null); }} />
+      <TopicFilter_Component
+        active={activeTopic}
+        onChange={(t) => { setActiveTopic(t); setSelectedPin(null); }}
+        hideRead={hideRead}
+        onToggleHideRead={() => setHideRead((v) => !v)}
+        hasReadPins={readPins.size > 0}
+      />
 
       {/* Pin card — overlaid at bottom when a pin is selected */}
       {selectedPin && (

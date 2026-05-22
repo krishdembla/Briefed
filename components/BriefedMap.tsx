@@ -18,6 +18,7 @@ import { TOPIC_COLORS } from "@/types/map";
 interface BriefedMapProps {
   geojson: FeatureCollection<Point>;
   onPinClick: (pin: MapPin) => void;
+  readPins: Set<string>;
 }
 
 // Build the Mapbox expression that maps topic → colour for individual pins
@@ -28,7 +29,7 @@ const topicColorExpression: mapboxgl.Expression = [
   TOPIC_COLORS.other, // fallback
 ];
 
-export default function BriefedMap({ geojson, onPinClick }: BriefedMapProps) {
+export default function BriefedMap({ geojson, onPinClick, readPins }: BriefedMapProps) {
   const mapRef = useRef<MapRef>(null);
 
   const handleClick = useCallback(
@@ -110,16 +111,16 @@ export default function BriefedMap({ geojson, onPinClick }: BriefedMapProps) {
           }}
           paint={{ "text-color": "#ffffff" }}
         />
-        {/* Individual pins */}
+        {/* Individual pins — read pins are visually demoted (grey, smaller, transparent) */}
         <Layer
           id="unclustered-point"
           type="circle"
           filter={["!", ["has", "point_count"]]}
           paint={{
-            "circle-color": topicColorExpression,
-            "circle-radius": 8,
-            "circle-opacity": 0.9,
-            "circle-stroke-width": 2,
+            "circle-color": ["case", ["get", "isRead"], "#6b7280", topicColorExpression],
+            "circle-radius": ["case", ["get", "isRead"], 6, 8],
+            "circle-opacity": ["case", ["get", "isRead"], 0.4, 0.9],
+            "circle-stroke-width": ["case", ["get", "isRead"], 0, 2],
             "circle-stroke-color": "#ffffff",
           }}
         />
