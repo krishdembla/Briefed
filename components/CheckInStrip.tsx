@@ -4,9 +4,10 @@ const REQUIRED = 3;
 
 interface CheckInStripProps {
   readCount: number;
+  streak: number;
 }
 
-export default function CheckInStrip({ readCount }: CheckInStripProps) {
+export default function CheckInStrip({ readCount, streak }: CheckInStripProps) {
   const done = readCount >= REQUIRED;
   const dots = Array.from({ length: REQUIRED }, (_, i) => i < readCount);
 
@@ -23,12 +24,21 @@ export default function CheckInStrip({ readCount }: CheckInStripProps) {
             />
           ))}
         </div>
+
         <span className="text-xs font-medium text-zinc-300">
-          {done
-            ? "Daily check-in complete"
-            : `Read ${REQUIRED - readCount} more to check in`}
+          {done ? "Daily check-in complete" : `Read ${REQUIRED - readCount} more to check in`}
         </span>
+
         {done && <span className="text-xs">🎉</span>}
+
+        {streak > 0 && (
+          <>
+            <div className="w-px h-3 bg-zinc-700" />
+            <span className="text-xs font-semibold text-orange-400">
+              🔥 {streak} {streak === 1 ? "day" : "days"}
+            </span>
+          </>
+        )}
       </div>
     </div>
   );
