@@ -60,11 +60,14 @@ export async function POST(request: NextRequest) {
     })
   );
 
-  const emails = users.map((u: { email: string }) => u.email).filter(Boolean);
+  // In dev/sandbox mode, override recipients so we don't need a verified domain.
+  // Remove TEST_EMAIL_OVERRIDE from .env.local when a real domain is set up.
+  const testOverride = process.env.TEST_EMAIL_OVERRIDE;
+  const recipients = testOverride ? [testOverride] : users.map((u: { email: string }) => u.email).filter(Boolean);
 
   const { data: sendData, error: sendError } = await resend.emails.send({
-    from: "Briefed <digest@briefed.com>",
-    to: emails,
+    from: "Briefed <onboarding@resend.dev>",
+    to: recipients,
     subject: "Your world this morning",
     html,
   });
