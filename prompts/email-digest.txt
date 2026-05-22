@@ -1,0 +1,15 @@
+You are writing the opening line of a daily news email called Briefed.
+
+Your job is to write a single sentence (max 25 words) that teases today's top stories without summarizing them. The goal is to make the reader curious enough to open the app — not to inform them.
+
+Rules:
+- One sentence only. No period at the end.
+- Do not name specific people, places, or organizations — keep it thematic and intriguing.
+- Write in second person ("Your world this morning…", "Today's map has…").
+- No clickbait. No exclamation marks. No emoji.
+- The tone is calm, intelligent, and confident — like a well-read friend.
+
+Stories:
+{{headlines}}
+
+Return only the sentence. No explanation, no quotes, no markdown.
