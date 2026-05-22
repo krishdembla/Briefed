@@ -3,11 +3,14 @@ import type { RawArticle } from "@/types/pipeline";
 
 const parser = new Parser({ timeout: 10_000 });
 
-// Fallback RSS feeds — BBC World, Reuters, AP
+// Primary RSS feeds — global, reputable, geographically diverse.
+// Reuters' public RSS was deprecated ~2019; RSSHub is an unreliable third-party proxy.
+// Al Jazeera and The Guardian provide strong international coverage, especially
+// outside the US-centric lens of NewsAPI.
 const RSS_FEEDS: { url: string; sourceName: string }[] = [
   { url: "https://feeds.bbci.co.uk/news/world/rss.xml", sourceName: "BBC World" },
-  { url: "https://feeds.reuters.com/reuters/worldNews", sourceName: "Reuters" },
-  { url: "https://rsshub.app/apnews/topics/apf-topnews", sourceName: "AP News" },
+  { url: "https://www.aljazeera.com/xml/rss/all.xml", sourceName: "Al Jazeera" },
+  { url: "https://www.theguardian.com/world/rss", sourceName: "The Guardian" },
 ];
 
 // Parses all RSS feeds concurrently. A single failed feed is logged and skipped

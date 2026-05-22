@@ -3,6 +3,7 @@ import { fetchFromNewsApi } from "./sources/newsapi";
 import { fetchFromFinnhub } from "./sources/finnhub";
 import { fetchFromRss } from "./sources/rss";
 import { deduplicate } from "./deduplicate";
+import { clusterByEvent } from "@/lib/ai/clusterByEvent";
 import { geoTagArticle } from "@/lib/ai/geoTag";
 import { summarizeArticle } from "@/lib/ai/summarize";
 import type { Pin, RawArticle } from "@/types/pipeline";
@@ -68,14 +69,25 @@ export async function runPipeline(): Promise<PipelineResult> {
     return { runId, pinsFetched, pinsStored: 0, pinsAiDone: 0, errors };
   }
 
-  // ── Steps 3 + 4: Geo-tag and summarize (concurrent per article) ─
+  // ── Step 3: Cluster same-event duplicates + importance filter ──
+  // One Claude call for the whole batch — groups articles covering the same
+  // event and drops anything below importance threshold (e.g. celebrity news).
+  const importantArticles = await clusterByEvent(freshArticles);
+  console.log(`[pipeline] After clustering + importance filter: ${importantArticles.length} articles`);
+
+  if (importantArticles.length === 0) {
+    await finishRun(runId, "success", { pinsFetched, pinsStored: 0, pinsAiDone: 0 });
+    return { runId, pinsFetched, pinsStored: 0, pinsAiDone: 0, errors };
+  }
+
+  // ── Steps 4 + 5: Geo-tag and summarize (concurrent per article) ─
   // Process articles in batches to avoid hammering the Claude API
   const BATCH_SIZE = 5;
   const pins: Pin[] = [];
   let pinsAiDone = 0;
 
-  for (let i = 0; i < freshArticles.length; i += BATCH_SIZE) {
-    const batch = freshArticles.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < importantArticles.length; i += BATCH_SIZE) {
+    const batch = importantArticles.slice(i, i + BATCH_SIZE);
 
     const processed = await Promise.allSettled(
       batch.map((article) => processArticle(article, runId))
@@ -93,10 +105,10 @@ export async function runPipeline(): Promise<PipelineResult> {
       }
     }
 
-    console.log(`[pipeline] Processed batch ${Math.floor(i / BATCH_SIZE) + 1} — ${pins.length}/${freshArticles.length} done`);
+    console.log(`[pipeline] Processed batch ${Math.floor(i / BATCH_SIZE) + 1} — ${pins.length}/${importantArticles.length} done`);
   }
 
-  // ── Step 5: Store ──────────────────────────────────────────────
+  // ── Step 6: Store ──────────────────────────────────────────────
   let pinsStored = 0;
 
   if (pins.length > 0) {
