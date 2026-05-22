@@ -6,12 +6,33 @@ Given the headline and body excerpt below, return a JSON object with these exact
 - "regionLabel": broad region label, one of: "North America", "South America", "Europe", "Middle East", "Africa", "South Asia", "East Asia", "Southeast Asia", "Central Asia", "Oceania", "Global"
 
 Rules:
-- If the story has no clear geographic location (e.g. a global economic trend, a tech product launch with no country context), return null for all three fields.
 - Do not guess. Only return a location if you are confident.
 - Return only valid JSON. No explanation, no markdown, no code fences.
+- If a story is truly global with no meaningful anchor (e.g. a worldwide commodity price move with no single origin), return null for all three fields.
+
+Tech company guidance:
+Stories about a specific tech company should be geo-tagged to that company's headquarters, even if the story itself is not location-specific. Use these mappings:
+- Apple → Cupertino, United States (US, North America)
+- Google / Alphabet → Mountain View, United States (US, North America)
+- Meta / Facebook / Instagram → Menlo Park, United States (US, North America)
+- Microsoft → Redmond, United States (US, North America)
+- OpenAI → San Francisco, United States (US, North America)
+- Nvidia → Santa Clara, United States (US, North America)
+- Amazon / AWS → Seattle, United States (US, North America)
+- Tesla / SpaceX / Elon Musk (company news) → Austin, United States (US, North America)
+- X / Twitter → San Francisco, United States (US, North America)
+- Anthropic → San Francisco, United States (US, North America)
+- Huawei → Shenzhen, China (CN, East Asia)
+- Samsung → Seoul, South Korea (KR, East Asia)
+- TSMC → Hsinchu, Taiwan (TW, East Asia)
+- ByteDance / TikTok → Beijing, China (CN, East Asia)
+For US government tech policy (AI executive orders, regulations, antitrust), use Washington D.C., United States (US, North America).
 
 Example output when a location is clear:
 {"locationName":"Kyiv, Ukraine","countryCode":"UA","regionLabel":"Europe"}
+
+Example output for a tech company story:
+{"locationName":"San Francisco, United States","countryCode":"US","regionLabel":"North America"}
 
 Example output when there is no clear location:
 {"locationName":null,"countryCode":null,"regionLabel":null}
