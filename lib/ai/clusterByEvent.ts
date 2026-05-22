@@ -9,7 +9,9 @@ const CLUSTER_PROMPT = fs.readFileSync(
 );
 
 // Articles scoring below this are considered not newsworthy enough for the map.
-const IMPORTANCE_THRESHOLD = 6;
+// Set to 5 to match the prompt's diversity rule — rare topics (tech, climate)
+// are scored 5+ by Claude and should be kept, not filtered out.
+const IMPORTANCE_THRESHOLD = 5;
 
 interface ClusterResult {
   keepIndex: number;

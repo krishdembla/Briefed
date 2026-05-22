@@ -41,27 +41,64 @@ interface NewsApiResponse {
   message?: string; // present on error responses
 }
 
-// Fetches top headlines plus broad "everything" results and merges them.
-// Returns normalized RawArticle objects; skips articles with no URL or title.
+// Fetches top headlines plus topic-targeted "everything" queries.
+// Separate queries per topic group ensure underrepresented topics (tech, climate,
+// health) get dedicated coverage rather than competing against war headlines.
 export async function fetchFromNewsApi(): Promise<RawArticle[]> {
   const apiKey = process.env.NEWSAPI_KEY;
   if (!apiKey) {
     throw new Error("Missing env var: NEWSAPI_KEY");
   }
 
+  const everythingBase = {
+    url: `${BASE_URL}/everything`,
+    method: "GET" as const,
+  };
+
   const requests = [
+    // Top headlines — broad news mix
     fetchWithRetry<NewsApiResponse>({
       url: `${BASE_URL}/top-headlines`,
       params: { language: "en", pageSize: 50, apiKey },
     }),
+    // Politics / conflict / diplomacy
     fetchWithRetry<NewsApiResponse>({
-      url: `${BASE_URL}/everything`,
+      ...everythingBase,
       params: {
-        q: "(war OR conflict OR military OR sanctions OR diplomacy OR election OR government OR parliament OR crisis OR coup) OR (economy OR inflation OR trade OR GDP OR central bank OR recession) OR (climate OR floods OR earthquake OR wildfire OR disaster) OR (health OR pandemic OR outbreak OR WHO)",
-        language: "en",
-        sortBy: "publishedAt",
-        pageSize: 50,
-        apiKey,
+        q: "war OR conflict OR military OR sanctions OR diplomacy OR election OR government OR parliament OR crisis OR coup",
+        language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
+      },
+    }),
+    // Economy / markets
+    fetchWithRetry<NewsApiResponse>({
+      ...everythingBase,
+      params: {
+        q: "economy OR inflation OR trade OR GDP OR \"central bank\" OR recession OR \"interest rate\" OR stock market",
+        language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
+      },
+    }),
+    // Tech / AI — dedicated query so it's not crowded out
+    fetchWithRetry<NewsApiResponse>({
+      ...everythingBase,
+      params: {
+        q: "\"artificial intelligence\" OR cybersecurity OR Apple OR Google OR Microsoft OR OpenAI OR semiconductor OR \"big tech\" OR robotics OR \"tech regulation\"",
+        language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
+      },
+    }),
+    // Climate / environment / natural disasters
+    fetchWithRetry<NewsApiResponse>({
+      ...everythingBase,
+      params: {
+        q: "\"climate change\" OR \"carbon emissions\" OR \"renewable energy\" OR wildfire OR flood OR drought OR IPCC OR \"sea level\" OR deforestation",
+        language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
+      },
+    }),
+    // Health / medicine / outbreaks
+    fetchWithRetry<NewsApiResponse>({
+      ...everythingBase,
+      params: {
+        q: "WHO OR pandemic OR vaccine OR outbreak OR FDA OR \"cancer research\" OR \"mental health\" OR Ebola OR \"drug approval\"",
+        language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
       },
     }),
   ];

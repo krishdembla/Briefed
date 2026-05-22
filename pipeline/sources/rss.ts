@@ -3,14 +3,22 @@ import type { RawArticle } from "@/types/pipeline";
 
 const parser = new Parser({ timeout: 10_000 });
 
-// Primary RSS feeds — global, reputable, geographically diverse.
-// Reuters' public RSS was deprecated ~2019; RSSHub is an unreliable third-party proxy.
-// Al Jazeera and The Guardian provide strong international coverage, especially
-// outside the US-centric lens of NewsAPI.
+// RSS feeds split by purpose:
+// - General/world news: broad coverage, geographically diverse
+// - Specialist feeds: dedicated per underrepresented topic (tech, climate, health)
 const RSS_FEEDS: { url: string; sourceName: string }[] = [
+  // General world news
   { url: "https://feeds.bbci.co.uk/news/world/rss.xml", sourceName: "BBC World" },
   { url: "https://www.aljazeera.com/xml/rss/all.xml", sourceName: "Al Jazeera" },
   { url: "https://www.theguardian.com/world/rss", sourceName: "The Guardian" },
+  // Tech / AI
+  { url: "https://techcrunch.com/feed/", sourceName: "TechCrunch" },
+  { url: "https://feeds.arstechnica.com/arstechnica/index", sourceName: "Ars Technica" },
+  // Climate / environment
+  { url: "https://www.carbonbrief.org/feed", sourceName: "Carbon Brief" },
+  { url: "https://www.theguardian.com/environment/climate-crisis/rss", sourceName: "Guardian Climate" },
+  // Health / biotech
+  { url: "https://www.statnews.com/feed/", sourceName: "STAT News" },
 ];
 
 // Parses all RSS feeds concurrently. A single failed feed is logged and skipped
