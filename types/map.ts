@@ -10,6 +10,7 @@ export interface MapPin {
   stat_3: string | null;
   topic: PinTopic | null;
   source_name: string;
+  source_url: string;
   published_at: string;
   lat: number;
   lng: number;

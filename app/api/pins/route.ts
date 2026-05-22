@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase
     .from("pins")
     .select(
-      "id, headline, summary, stat_1, stat_2, stat_3, topic, source_name, published_at, lat, lng, country_code, region_label"
+      "id, headline, summary, stat_1, stat_2, stat_3, topic, source_name, source_url, published_at, lat, lng, country_code, region_label"
     )
     .eq("ai_processed", true)
     .not("lat", "is", null)
