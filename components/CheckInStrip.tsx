@@ -1,0 +1,35 @@
+"use client";
+
+const REQUIRED = 3;
+
+interface CheckInStripProps {
+  readCount: number;
+}
+
+export default function CheckInStrip({ readCount }: CheckInStripProps) {
+  const done = readCount >= REQUIRED;
+  const dots = Array.from({ length: REQUIRED }, (_, i) => i < readCount);
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center pb-4 pointer-events-none">
+      <div className="flex items-center gap-3 bg-zinc-900/90 backdrop-blur-sm border border-zinc-700 rounded-full px-4 py-2 shadow-lg">
+        <div className="flex gap-1.5">
+          {dots.map((filled, i) => (
+            <div
+              key={i}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                filled ? "bg-white scale-110" : "bg-zinc-600"
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-xs font-medium text-zinc-300">
+          {done
+            ? "Daily check-in complete"
+            : `Read ${REQUIRED - readCount} more to check in`}
+        </span>
+        {done && <span className="text-xs">🎉</span>}
+      </div>
+    </div>
+  );
+}

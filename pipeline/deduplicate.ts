@@ -33,20 +33,26 @@ export async function deduplicate(articles: RawArticle[]): Promise<RawArticle[]>
 
   const incomingUrls = normalized.map((n) => n.normalizedUrl);
 
-  // Check which of these URLs already exist in the DB
-  const { data: existing, error } = await supabase
-    .from("pins")
-    .select("source_url")
-    .in("source_url", incomingUrls);
+  // Supabase's .in() has a query size limit — batch into chunks of 100
+  const CHUNK_SIZE = 100;
+  const existingUrls = new Set<string>();
 
-  if (error) {
-    // If the check fails, log and return all articles rather than dropping them —
-    // the upsert with ON CONFLICT will handle true duplicates at write time.
-    console.error("[deduplicate] Supabase query failed — skipping dedup check:", error.message);
-    return articles;
+  for (let i = 0; i < incomingUrls.length; i += CHUNK_SIZE) {
+    const chunk = incomingUrls.slice(i, i + CHUNK_SIZE);
+    const { data, error } = await supabase
+      .from("pins")
+      .select("source_url")
+      .in("source_url", chunk);
+
+    if (error) {
+      console.error("[deduplicate] Supabase query failed — skipping dedup check:", error.message);
+      return articles; // fallback: let upsert handle conflicts
+    }
+
+    for (const row of data ?? []) {
+      existingUrls.add(row.source_url.toLowerCase());
+    }
   }
-
-  const existingUrls = new Set((existing ?? []).map((row) => row.source_url.toLowerCase()));
 
   const fresh = normalized.filter((n) => !existingUrls.has(n.normalizedUrl));
 
