@@ -36,16 +36,15 @@ export async function POST(request: NextRequest) {
   const intro = await generateDigestIntro(pins.map((p) => p.headline));
 
   // ── Fetch all subscribed user emails ─────────────────────────────────────
-  // auth.users is only accessible via the service role — we query it directly
-  const { data: users, error: usersError } = await supabase
-    .from("auth.users")
-    .select("email")
-    .not("email", "is", null);
+  // auth.users requires the admin API — .from() can't cross schemas
+  const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
 
-  if (usersError || !users || users.length === 0) {
+  if (usersError || !usersData?.users?.length) {
     console.error("[send-digest] No users found:", usersError?.message);
     return NextResponse.json({ error: "No users to send to" }, { status: 422 });
   }
+
+  const users = usersData.users;
 
   // ── Render and send ───────────────────────────────────────────────────────
   const html = await render(
@@ -63,7 +62,9 @@ export async function POST(request: NextRequest) {
   // In dev/sandbox mode, override recipients so we don't need a verified domain.
   // Remove TEST_EMAIL_OVERRIDE from .env.local when a real domain is set up.
   const testOverride = process.env.TEST_EMAIL_OVERRIDE;
-  const recipients = testOverride ? [testOverride] : users.map((u: { email: string }) => u.email).filter(Boolean);
+  const recipients: string[] = testOverride
+    ? [testOverride]
+    : users.map((u) => u.email).filter((e): e is string => !!e);
 
   const { data: sendData, error: sendError } = await resend.emails.send({
     from: "Briefed <onboarding@resend.dev>",
@@ -77,6 +78,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: sendError.message }, { status: 500 });
   }
 
-  console.log(`[send-digest] Sent to ${emails.length} users. Resend ID: ${sendData?.id}`);
-  return NextResponse.json({ sent: emails.length, resendId: sendData?.id });
+  console.log(`[send-digest] Sent to ${recipients.length} users. Resend ID: ${sendData?.id}`);
+  return NextResponse.json({ sent: recipients.length, resendId: sendData?.id });
 }
