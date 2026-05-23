@@ -58,6 +58,41 @@ CREATE INDEX IF NOT EXISTS pins_run_idx          ON pins (pipeline_run_id);
 
 -- Row Level Security
 -- Service role key bypasses RLS so the pipeline is unaffected.
--- Anon/authenticated access is blocked until we add explicit policies in Week 2.
 ALTER TABLE pipeline_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pins ENABLE ROW LEVEL SECURITY;
+
+-- Authenticated users can read pins (via /api/pins which uses service role,
+-- but this policy allows direct client reads if ever needed)
+CREATE POLICY IF NOT EXISTS "Authenticated users can read pins"
+  ON pins FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- ============================================================
+-- Week 3: user check-ins for streak tracking
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS checkins (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  date       date NOT NULL,
+  pins_read  integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS checkins_user_date_idx ON checkins (user_id, date DESC);
+
+ALTER TABLE checkins ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own checkins"
+  ON checkins FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own checkins"
+  ON checkins FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own checkins"
+  ON checkins FOR UPDATE
+  USING (auth.uid() = user_id);

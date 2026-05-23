@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { FeatureCollection, Point } from "geojson";
 import type { MapPin, TopicFilter } from "@/types/map";
 import TopicFilter_Component from "./TopicFilter";
 import PinCard from "./PinCard";
 import CheckInStrip from "./CheckInStrip";
+import { createSupabaseBrowserClient } from "@/lib/db/supabase-browser";
+import { recordCheckin, fetchStreak } from "@/lib/db/checkins";
 
 // Dynamic import avoids SSR entirely for the Mapbox component
 const BriefedMap = dynamic(() => import("./BriefedMap"), { ssr: false });
@@ -40,6 +42,9 @@ export default function MapContainer() {
   const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
   const [readPins, setReadPins] = useState<Set<string>>(new Set());
   const [hideRead, setHideRead] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [streak, setStreak] = useState(0);
+  const checkinRecordedRef = useRef(false);
 
   // Fetch pins from the API route
   useEffect(() => {
@@ -63,6 +68,27 @@ export default function MapContainer() {
   useEffect(() => {
     setReadPins(loadReadPins());
   }, []);
+
+  // Resolve the authenticated user and load their streak
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getUser().then(({ data }) => {
+      const id = data.user?.id ?? null;
+      setUserId(id);
+      if (id) fetchStreak(id).then(setStreak).catch(console.error);
+    });
+  }, []);
+
+  // Record a checkin the first time 3 pins are read in a session
+  useEffect(() => {
+    if (readPins.size >= 3 && userId && !checkinRecordedRef.current) {
+      checkinRecordedRef.current = true;
+      recordCheckin(userId, readPins.size)
+        .then(() => fetchStreak(userId))
+        .then(setStreak)
+        .catch(console.error);
+    }
+  }, [readPins, userId]);
 
   const handleRead = (pinId: string) => {
     setReadPins((prev) => {
@@ -137,7 +163,7 @@ export default function MapContainer() {
 
       {/* Check-in strip — only visible when no pin card is open */}
       {!selectedPin && (
-        <CheckInStrip readCount={readCount} />
+        <CheckInStrip readCount={readCount} streak={streak} />
       )}
     </div>
   );
