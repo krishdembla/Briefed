@@ -72,20 +72,16 @@ A web app that plots live global news events as interactive pins on a world map,
 /types            → Shared TypeScript types
 
 ## Current Phase
-**Week 2 — Map UI**
-Pipeline is complete. Next: render pins on an interactive Mapbox map in Next.js.
+**Week 3 — Auth + Email Digest (complete)**
+Next: Week 4 TBD.
 
-## What's Built (Week 1 — complete)
-- `pipeline/run.ts` — orchestrator, triggered via `npm run pipeline` or `POST /api/pipeline/run`
-- `pipeline/sources/` — NewsAPI, Finnhub, RSS fetchers with retry + source blocklist
-- `pipeline/deduplicate.ts` — URL normalisation + Supabase batch dedup check
-- `lib/ai/geoTag.ts` — Claude extracts location name → Mapbox resolves lat/lng
-- `lib/ai/summarize.ts` — Claude produces summary + 3 stats + topic as validated JSON
-- `prompts/` — all LLM prompts as text files (geo-tag.txt, summarize.txt)
-- `supabase/schema.sql` — pins + pipeline_runs tables, RLS enabled
-- `scripts/check-pipeline.ts` — audit last run and sample pins
-- `scripts/reprocess-failed.ts` — re-runs AI on any pins where ai_processed = false
-- `.env.local` — all secrets (gitignored). See `.env.example` for required keys.
+## What's Built
+- **Pipeline** — fetch → dedup → cluster → geo-tag → summarize → Supabase (`pipeline/run.ts`)
+- **Map UI** — Mapbox pins, topic filters, 7-day window, read pin demoting, centered pin card modal with source link
+- **Auth** — Supabase email/password auth, middleware-protected routes (`app/auth/page.tsx`, `middleware.ts`)
+- **Streak tracking** — `checkins` table, daily check-in recorded at 3 reads, streak shown in UI
+- **Email digest** — React Email template, Claude-generated intro, Resend send route, Vercel cron at 7am UTC
+- `.env.example` — all required keys documented
 
 ---
 
