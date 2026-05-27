@@ -57,48 +57,65 @@ export async function fetchFromNewsApi(): Promise<RawArticle[]> {
 
   const requests = [
     // Top headlines — broad news mix
+    // Top headlines — broad global mix
     fetchWithRetry<NewsApiResponse>({
       url: `${BASE_URL}/top-headlines`,
-      params: { language: "en", pageSize: 50, apiKey },
+      params: { language: "en", pageSize: 100, apiKey },
     }),
     // Politics / conflict / diplomacy
     fetchWithRetry<NewsApiResponse>({
       ...everythingBase,
       params: {
-        q: "war OR conflict OR military OR sanctions OR diplomacy OR election OR government OR parliament OR crisis OR coup",
-        language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
+        q: "war OR conflict OR military OR sanctions OR diplomacy OR election OR government OR parliament OR crisis OR coup OR protest OR ceasefire OR siege",
+        language: "en", sortBy: "publishedAt", pageSize: 100, apiKey,
       },
     }),
-    // Economy / markets
+    // Economy / markets / trade
     fetchWithRetry<NewsApiResponse>({
       ...everythingBase,
       params: {
-        q: "economy OR inflation OR trade OR GDP OR \"central bank\" OR recession OR \"interest rate\" OR stock market",
-        language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
+        q: "economy OR inflation OR trade OR GDP OR \"central bank\" OR recession OR \"interest rate\" OR \"stock market\" OR tariff OR \"supply chain\" OR IMF OR \"World Bank\"",
+        language: "en", sortBy: "publishedAt", pageSize: 100, apiKey,
       },
     }),
-    // Tech / AI — dedicated query so it's not crowded out
+    // Tech / AI / cyber
     fetchWithRetry<NewsApiResponse>({
       ...everythingBase,
       params: {
-        q: "\"artificial intelligence\" OR cybersecurity OR Apple OR Google OR Microsoft OR OpenAI OR semiconductor OR \"big tech\" OR robotics OR \"tech regulation\"",
-        language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
+        q: "\"artificial intelligence\" OR cybersecurity OR Apple OR Google OR Microsoft OR OpenAI OR semiconductor OR \"big tech\" OR robotics OR \"tech regulation\" OR deepfake OR quantum",
+        language: "en", sortBy: "publishedAt", pageSize: 100, apiKey,
       },
     }),
     // Climate / environment / natural disasters
     fetchWithRetry<NewsApiResponse>({
       ...everythingBase,
       params: {
-        q: "\"climate change\" OR \"carbon emissions\" OR \"renewable energy\" OR wildfire OR flood OR drought OR IPCC OR \"sea level\" OR deforestation",
-        language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
+        q: "\"climate change\" OR \"carbon emissions\" OR \"renewable energy\" OR wildfire OR flood OR earthquake OR hurricane OR drought OR IPCC OR \"sea level\" OR deforestation OR tsunami",
+        language: "en", sortBy: "publishedAt", pageSize: 100, apiKey,
       },
     }),
     // Health / medicine / outbreaks
     fetchWithRetry<NewsApiResponse>({
       ...everythingBase,
       params: {
-        q: "WHO OR pandemic OR vaccine OR outbreak OR FDA OR \"cancer research\" OR \"mental health\" OR Ebola OR \"drug approval\"",
-        language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
+        q: "WHO OR pandemic OR vaccine OR outbreak OR FDA OR \"cancer research\" OR \"mental health\" OR Ebola OR \"drug approval\" OR \"bird flu\" OR mpox OR antimicrobial",
+        language: "en", sortBy: "publishedAt", pageSize: 100, apiKey,
+      },
+    }),
+    // Africa + Middle East — underrepresented by top-headlines
+    fetchWithRetry<NewsApiResponse>({
+      ...everythingBase,
+      params: {
+        q: "Nigeria OR Kenya OR Ethiopia OR Sudan OR DRC OR Somalia OR \"South Africa\" OR Egypt OR \"Saudi Arabia\" OR Iran OR Iraq OR Yemen OR Lebanon OR Gaza OR Libya OR Tunisia OR Morocco OR Ghana",
+        language: "en", sortBy: "publishedAt", pageSize: 100, apiKey,
+      },
+    }),
+    // Latin America + South / Southeast Asia
+    fetchWithRetry<NewsApiResponse>({
+      ...everythingBase,
+      params: {
+        q: "Brazil OR Argentina OR Mexico OR Colombia OR Venezuela OR Chile OR Peru OR India OR Pakistan OR Bangladesh OR Indonesia OR Philippines OR Vietnam OR Myanmar OR Thailand OR Malaysia",
+        language: "en", sortBy: "publishedAt", pageSize: 100, apiKey,
       },
     }),
   ];

@@ -96,3 +96,27 @@ CREATE POLICY "Users can insert own checkins"
 CREATE POLICY "Users can update own checkins"
   ON checkins FOR UPDATE
   USING (auth.uid() = user_id);
+
+-- ============================================================
+-- Week 4: user topic preferences for onboarding + digest personalisation
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+  user_id    uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  topics     text[] NOT NULL DEFAULT '{}',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own preferences"
+  ON user_preferences FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own preferences"
+  ON user_preferences FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own preferences"
+  ON user_preferences FOR UPDATE
+  USING (auth.uid() = user_id);

@@ -1,0 +1,177 @@
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/db/supabase-server";
+import { supabase as adminSupabase } from "@/lib/db/supabase";
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+type PipelineRun = {
+  id: string;
+  started_at: string;
+  finished_at: string | null;
+  status: "running" | "success" | "error";
+  error_msg: string | null;
+  pins_fetched: number;
+  pins_stored: number;
+  pins_ai_done: number;
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function duration(start: string, end: string | null): string {
+  if (!end) return "running…";
+  const ms = new Date(end).getTime() - new Date(start).getTime();
+  const s = Math.round(ms / 1000);
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+}
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-GB", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  success: "bg-emerald-500/15 text-emerald-400",
+  error:   "bg-red-500/15 text-red-400",
+  running: "bg-yellow-500/15 text-yellow-400",
+};
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function AdminPage() {
+  // Verify the current user is the admin
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!user || !adminEmail || user.email !== adminEmail) {
+    redirect("/");
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Parallel data fetch
+  const [runsResult, checkinsResult, usersResult, prefsResult] = await Promise.all([
+    adminSupabase
+      .from("pipeline_runs")
+      .select("*")
+      .order("started_at", { ascending: false })
+      .limit(15),
+
+    adminSupabase
+      .from("checkins")
+      .select("*", { count: "exact", head: true })
+      .eq("date", today),
+
+    adminSupabase.auth.admin.listUsers(),
+
+    adminSupabase
+      .from("user_preferences")
+      .select("user_id", { count: "exact", head: true }),
+  ]);
+
+  const runs: PipelineRun[] = runsResult.data ?? [];
+  const checkinsToday = checkinsResult.count ?? 0;
+  const totalUsers = usersResult.data?.users?.length ?? 0;
+  const onboardedUsers = prefsResult.count ?? 0;
+
+  const lastRun = runs[0] ?? null;
+  const successRate = runs.length
+    ? Math.round((runs.filter((r) => r.status === "success").length / runs.length) * 100)
+    : 0;
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-white">
+      <div className="max-w-4xl mx-auto px-6 py-10">
+
+        {/* Header */}
+        <div className="mb-10">
+          <h1 className="text-2xl font-bold tracking-tight">Admin</h1>
+          <p className="text-zinc-500 text-sm mt-1">Briefed internal dashboard</p>
+        </div>
+
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+          <StatCard label="Total users" value={totalUsers} />
+          <StatCard label="Onboarded" value={onboardedUsers} note={`${totalUsers ? Math.round((onboardedUsers / totalUsers) * 100) : 0}%`} />
+          <StatCard label="Check-ins today" value={checkinsToday} />
+          <StatCard label="Pipeline success" value={`${successRate}%`} note={`last ${runs.length} runs`} />
+        </div>
+
+        {/* Last run summary */}
+        {lastRun && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-6">
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Last pipeline run</p>
+            <div className="flex flex-wrap gap-6">
+              <Metric label="Status">
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[lastRun.status]}`}>
+                  {lastRun.status}
+                </span>
+              </Metric>
+              <Metric label="Started">{formatTime(lastRun.started_at)}</Metric>
+              <Metric label="Duration">{duration(lastRun.started_at, lastRun.finished_at)}</Metric>
+              <Metric label="Fetched">{lastRun.pins_fetched}</Metric>
+              <Metric label="Stored">{lastRun.pins_stored}</Metric>
+              <Metric label="AI done">{lastRun.pins_ai_done}</Metric>
+            </div>
+            {lastRun.error_msg && (
+              <p className="mt-3 text-xs text-red-400 bg-red-500/10 rounded-xl px-3 py-2 font-mono break-all">
+                {lastRun.error_msg}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Pipeline run history */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-zinc-800">
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Pipeline history</p>
+          </div>
+          <div className="divide-y divide-zinc-800">
+            {runs.length === 0 && (
+              <p className="px-5 py-4 text-sm text-zinc-600">No runs yet.</p>
+            )}
+            {runs.map((run) => (
+              <div key={run.id} className="px-5 py-3 flex items-center gap-4 text-sm">
+                <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[run.status]}`}>
+                  {run.status}
+                </span>
+                <span className="text-zinc-300 min-w-0">{formatTime(run.started_at)}</span>
+                <span className="text-zinc-600 text-xs">{duration(run.started_at, run.finished_at)}</span>
+                <span className="text-zinc-600 text-xs ml-auto">
+                  {run.pins_stored} stored · {run.pins_ai_done} AI
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function StatCard({ label, value, note }: { label: string; value: string | number; note?: string }) {
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-4">
+      <p className="text-xs text-zinc-500 mb-1">{label}</p>
+      <p className="text-2xl font-bold text-white">{value}</p>
+      {note && <p className="text-xs text-zinc-600 mt-0.5">{note}</p>}
+    </div>
+  );
+}
+
+function Metric({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs text-zinc-500 mb-1">{label}</p>
+      <div className="text-sm font-medium text-white">{children}</div>
+    </div>
+  );
+}

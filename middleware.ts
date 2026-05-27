@@ -26,9 +26,12 @@ export async function middleware(request: NextRequest) {
   // Refresh the session — do not remove this, it keeps tokens alive
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
+  const { pathname } = request.nextUrl;
+  const isAuthPage = pathname.startsWith("/auth");
+  const isOnboarding = pathname.startsWith("/onboarding");
+  const isPublic = isAuthPage || isOnboarding;
 
-  // Unauthenticated users can only access /auth
+  // Unauthenticated users can only access /auth (not /onboarding or any other page)
   if (!user && !isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
@@ -40,6 +43,11 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
+  }
+
+  // Let authenticated users access /onboarding freely
+  if (user && isPublic) {
+    return supabaseResponse;
   }
 
   return supabaseResponse;

@@ -9,9 +9,9 @@ const CLUSTER_PROMPT = fs.readFileSync(
 );
 
 // Articles scoring below this are considered not newsworthy enough for the map.
-// Set to 5 to match the prompt's diversity rule — rare topics (tech, climate)
-// are scored 5+ by Claude and should be kept, not filtered out.
-const IMPORTANCE_THRESHOLD = 5;
+// Set to 4 so regional stories (Africa, South America, SE Asia) that score 4–5
+// survive alongside the higher-stakes political and conflict news.
+const IMPORTANCE_THRESHOLD = 4;
 
 interface ClusterResult {
   keepIndex: number;

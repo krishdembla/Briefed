@@ -6,7 +6,10 @@ import { deduplicate } from "./deduplicate";
 import { clusterByEvent } from "@/lib/ai/clusterByEvent";
 import { geoTagArticle } from "@/lib/ai/geoTag";
 import { summarizeArticle } from "@/lib/ai/summarize";
+import { sendAlertEmail } from "@/lib/alerts";
 import type { Pin, RawArticle } from "@/types/pipeline";
+
+const RATE_LIMIT_MINUTES = 30;
 
 export interface PipelineResult {
   runId: string;
@@ -19,6 +22,22 @@ export interface PipelineResult {
 // Main pipeline entry point. Fetches → deduplicates → geo-tags → summarizes → stores.
 // Designed to be called from the API route or the local script.
 export async function runPipeline(): Promise<PipelineResult> {
+  // Rate limit: reject if a run completed successfully within the last RATE_LIMIT_MINUTES
+  const rateLimitSince = new Date(Date.now() - RATE_LIMIT_MINUTES * 60 * 1000).toISOString();
+  const { data: recentRun } = await supabase
+    .from("pipeline_runs")
+    .select("id, started_at")
+    .eq("status", "success")
+    .gte("started_at", rateLimitSince)
+    .limit(1)
+    .single();
+
+  if (recentRun) {
+    const msg = `Pipeline rate-limited — last successful run was at ${recentRun.started_at}`;
+    console.warn(`[pipeline] ${msg}`);
+    throw new Error(msg);
+  }
+
   // Create a pipeline_runs record so we can audit this run
   const { data: run, error: runCreateError } = await supabase
     .from("pipeline_runs")
@@ -200,4 +219,11 @@ async function finishRun(
       pins_ai_done: counts.pinsAiDone,
     })
     .eq("id", runId);
+
+  if (status === "error") {
+    await sendAlertEmail(
+      "Pipeline run failed",
+      `Run ID: ${runId}\n\nErrors:\n${counts.errorMsg ?? "unknown"}\n\nStats: fetched=${counts.pinsFetched} stored=${counts.pinsStored} ai_done=${counts.pinsAiDone}`
+    );
+  }
 }

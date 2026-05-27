@@ -7,6 +7,8 @@ interface PinCardProps {
   isRead: boolean;
   onRead: (pinId: string) => void;
   onClose: () => void;
+  relatedPins?: MapPin[];
+  onSelectRelated?: (pin: MapPin) => void;
 }
 
 function timeAgo(iso: string): string {
@@ -17,7 +19,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export default function PinCard({ pin, isRead, onRead, onClose }: PinCardProps) {
+export default function PinCard({ pin, isRead, onRead, onClose, relatedPins = [], onSelectRelated }: PinCardProps) {
   const topicColor = TOPIC_COLORS[pin.topic ?? "other"] ?? TOPIC_COLORS.other;
   const topicLabel = TOPIC_LABELS[pin.topic ?? "other"] ?? "Other";
   const stats = [pin.stat_1, pin.stat_2, pin.stat_3].filter(Boolean) as string[];
@@ -105,6 +107,37 @@ export default function PinCard({ pin, isRead, onRead, onClose }: PinCardProps) 
               {isRead ? "Read ✓" : "Mark as read"}
             </button>
           </div>
+
+          {/* Related pins */}
+          {relatedPins.length > 0 && (
+            <div className="mt-5 pt-4 border-t border-zinc-800">
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2.5">
+                More on {topicLabel}
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {relatedPins.map((related) => (
+                  <button
+                    key={related.id}
+                    onClick={() => onSelectRelated?.(related)}
+                    className="flex items-start gap-2.5 text-left group w-full rounded-xl px-2.5 py-2 hover:bg-zinc-800/60 transition-colors"
+                  >
+                    <span
+                      className="mt-1.5 w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: topicColor }}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm text-zinc-300 group-hover:text-white leading-snug line-clamp-2 transition-colors">
+                        {related.headline}
+                      </p>
+                      {related.region_label && (
+                        <p className="text-xs text-zinc-600 mt-0.5">{related.region_label}</p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
