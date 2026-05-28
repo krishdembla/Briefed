@@ -8,6 +8,7 @@ import TopicFilter_Component from "./TopicFilter";
 import PinCard from "./PinCard";
 import CheckInStrip from "./CheckInStrip";
 import SearchBar from "./SearchBar";
+import UserMenu from "./UserMenu";
 import { createSupabaseBrowserClient } from "@/lib/db/supabase-browser";
 import { recordCheckin, fetchStreak } from "@/lib/db/checkins";
 
@@ -45,6 +46,7 @@ export default function MapContainer() {
   const [hideRead, setHideRead] = useState(false);
   const [freshnessDays, setFreshnessDays] = useState(1.5);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
   const checkinRecordedRef = useRef(false);
   const flyToRef = useRef<((lng: number, lat: number) => void) | null>(null);
@@ -77,7 +79,9 @@ export default function MapContainer() {
     const supabase = createSupabaseBrowserClient();
     supabase.auth.getUser().then(({ data }) => {
       const id = data.user?.id ?? null;
+      const email = data.user?.email ?? null;
       setUserId(id);
+      setUserEmail(email);
       if (id) fetchStreak(id).then(setStreak).catch(console.error);
     });
   }, []);
@@ -187,6 +191,11 @@ export default function MapContainer() {
         onFreshnessChange={setFreshnessDays}
         topicCounts={topicCounts}
       />
+
+      {/* User menu — top left: avatar + profile panel */}
+      {userId && userEmail && (
+        <UserMenu userId={userId} userEmail={userEmail} />
+      )}
 
       {/* Search bar — top right: autocomplete dropdown + fly-to */}
       <SearchBar
