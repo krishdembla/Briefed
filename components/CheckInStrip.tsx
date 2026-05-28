@@ -12,7 +12,7 @@ export default function CheckInStrip({ readCount, streak }: CheckInStripProps) {
   const dots = Array.from({ length: REQUIRED }, (_, i) => i < readCount);
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center pb-4 pointer-events-none">
+    <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center pointer-events-none" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
       <div className="flex items-center gap-3 bg-zinc-900/90 backdrop-blur-sm border border-zinc-700 rounded-full px-4 py-2 shadow-lg">
         <div className="flex gap-1.5">
           {dots.map((filled, i) => (

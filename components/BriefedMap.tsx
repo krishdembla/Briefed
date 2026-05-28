@@ -179,14 +179,14 @@ export default function BriefedMap({ geojson, onPinClick, readPins, onFlyTo }: B
         <button
           onClick={() => mapRef.current?.zoomIn()}
           aria-label="Zoom in"
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-all shadow-lg text-lg font-light select-none"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-all shadow-lg text-lg font-light select-none"
         >
           +
         </button>
         <button
           onClick={() => mapRef.current?.zoomOut()}
           aria-label="Zoom out"
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-all shadow-lg text-lg font-light select-none"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-all shadow-lg text-lg font-light select-none"
         >
           −
         </button>

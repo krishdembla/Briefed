@@ -70,11 +70,11 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
 
   if (!open) {
     return (
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute right-4 z-10" style={{ top: "calc(1rem + env(safe-area-inset-top, 0px))" }}>
         <button
           onClick={expand}
           aria-label="Search pins"
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all shadow-lg"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all shadow-lg"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -85,7 +85,7 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
   }
 
   return (
-    <div ref={containerRef} className="absolute top-4 right-4 z-10 w-72">
+    <div ref={containerRef} className="absolute right-4 z-10 w-[calc(100vw-5rem)] sm:w-72" style={{ top: "calc(1rem + env(safe-area-inset-top, 0px))" }}>
       {/* Input row */}
       <div className="flex items-center bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl px-3 py-2 gap-2 shadow-xl">
         <svg className="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -26,15 +26,20 @@ export default function PinCard({ pin, isRead, onRead, onClose, relatedPins = []
 
   return (
     <div
-      className="fixed inset-0 z-20 flex items-center justify-center p-4 bg-zinc-950/75 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-20 flex items-end sm:items-center sm:justify-center sm:p-4 bg-zinc-950/75 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
     >
+      {/* Bottom sheet on mobile, centered card on sm+ */}
       <div
-        className="w-full max-w-lg bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800 overflow-hidden animate-modal-in"
+        className="w-full sm:max-w-lg bg-zinc-900 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-zinc-800 overflow-y-auto max-h-[88svh] sm:max-h-[90vh] animate-modal-in"
         style={{ borderLeftColor: topicColor, borderLeftWidth: "3px" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-5 pt-5 pb-6">
+        {/* Drag handle — mobile only */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden">
+          <div className="w-10 h-1 rounded-full bg-zinc-700" />
+        </div>
+        <div className="px-5 pt-3 sm:pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
           {/* Top row: topic badge + region + close button */}
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -60,7 +65,7 @@ export default function PinCard({ pin, isRead, onRead, onClose, relatedPins = []
           </div>
 
           {/* Headline */}
-          <h2 className="text-white font-bold text-lg leading-snug mb-3">
+          <h2 className="text-white font-bold text-base sm:text-lg leading-snug mb-3">
             {pin.headline}
           </h2>
 

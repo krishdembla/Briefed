@@ -44,11 +44,16 @@ export default function QuizModal({ pins, onClose }: QuizModalProps) {
   const isCorrect = selected === quiz?.correctIndex;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-modal-in">
-      <div className="relative w-full max-w-md mx-4 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center bg-black/60 backdrop-blur-sm animate-modal-in">
+      <div className="relative w-full sm:max-w-md sm:mx-4 bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden">
+
+        {/* Drag handle — mobile only */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden">
+          <div className="w-10 h-1 rounded-full bg-zinc-700" />
+        </div>
 
         {/* Header */}
-        <div className="px-5 pt-5 pb-4 border-b border-zinc-800 flex items-center justify-between">
+        <div className="px-5 pt-3 sm:pt-5 pb-4 border-b border-zinc-800 flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Connect the dots</p>
             <p className="text-white text-sm font-semibold mt-0.5">Daily check-in complete ✓</p>
@@ -62,7 +67,7 @@ export default function QuizModal({ pins, onClose }: QuizModalProps) {
         </div>
 
         {/* Body */}
-        <div className="px-5 py-5">
+        <div className="px-5 py-5" style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}>
           {phase === "loading" && (
             <div className="flex flex-col items-center gap-3 py-6">
               <div className="w-6 h-6 rounded-full border-2 border-zinc-700 border-t-white animate-spin" />

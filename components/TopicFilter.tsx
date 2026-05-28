@@ -35,7 +35,7 @@ export default function TopicFilter({
   const total = topicCounts["all"] ?? 0;
 
   return (
-    <div className="absolute top-4 left-0 right-0 z-10 flex flex-col items-center gap-2 pointer-events-none">
+    <div className="absolute left-0 right-0 z-10 flex flex-col items-center gap-2 pointer-events-none" style={{ top: "calc(1rem + env(safe-area-inset-top, 0px))" }}>
 
       {/* Row 1: Topic pills — badge is inline so it never overflows the scroll container */}
       <div className="flex gap-2 overflow-x-auto px-4 pointer-events-auto no-scrollbar">
