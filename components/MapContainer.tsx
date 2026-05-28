@@ -9,6 +9,7 @@ import PinCard from "./PinCard";
 import CheckInStrip from "./CheckInStrip";
 import SearchBar from "./SearchBar";
 import UserMenu from "./UserMenu";
+import QuizModal from "./QuizModal";
 import { createSupabaseBrowserClient } from "@/lib/db/supabase-browser";
 import { recordCheckin, fetchStreak } from "@/lib/db/checkins";
 
@@ -48,7 +49,11 @@ export default function MapContainer() {
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [quizPins, setQuizPins] = useState<MapPin[]>([]);
   const checkinRecordedRef = useRef(false);
+  // Tracks if today's quiz has already been shown (one per day)
+  const quizShownRef = useRef(false);
   const flyToRef = useRef<((lng: number, lat: number) => void) | null>(null);
 
   // Fetch pins from the API route
@@ -86,7 +91,7 @@ export default function MapContainer() {
     });
   }, []);
 
-  // Record a checkin the first time 3 pins are read in a session
+  // Record a checkin the first time 3 pins are read in a session, then show the quiz
   useEffect(() => {
     if (readPins.size >= 3 && userId && !checkinRecordedRef.current) {
       checkinRecordedRef.current = true;
@@ -94,8 +99,22 @@ export default function MapContainer() {
         .then(() => fetchStreak(userId))
         .then(setStreak)
         .catch(console.error);
+
+      // Show quiz once per day using two of the read pins
+      if (!quizShownRef.current) {
+        quizShownRef.current = true;
+        const readIds = [...readPins];
+        const selectedPins = readIds
+          .slice(0, 2)
+          .map((id) => pins.find((p) => p.id === id))
+          .filter(Boolean) as MapPin[];
+        if (selectedPins.length === 2) {
+          setQuizPins(selectedPins);
+          setShowQuiz(true);
+        }
+      }
     }
-  }, [readPins, userId]);
+  }, [readPins, userId, pins]);
 
   const handleRead = (pinId: string) => {
     setReadPins((prev) => {
@@ -221,6 +240,14 @@ export default function MapContainer() {
       {/* Check-in strip — only visible when no pin card is open */}
       {!selectedPin && (
         <CheckInStrip readCount={readCount} streak={streak} />
+      )}
+
+      {/* Quiz modal — shown once after daily check-in completes */}
+      {showQuiz && (
+        <QuizModal
+          pins={quizPins}
+          onClose={() => setShowQuiz(false)}
+        />
       )}
     </div>
   );
