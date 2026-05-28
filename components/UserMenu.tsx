@@ -157,9 +157,15 @@ export default function UserMenu({ userId, userEmail }: UserMenuProps) {
             </button>
           </div>
 
-          {/* Sign out */}
+          {/* Profile + Sign out */}
           <div className="px-4 pb-4">
             <div className="h-px bg-zinc-800 mb-3" />
+            <button
+              onClick={() => router.push("/profile")}
+              className="w-full py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 transition-all mb-2"
+            >
+              View profile & streak
+            </button>
             <button
               onClick={handleSignOut}
               disabled={signingOut}
