@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import Map, {
   Source,
   Layer,
@@ -19,6 +19,8 @@ interface BriefedMapProps {
   geojson: FeatureCollection<Point>;
   onPinClick: (pin: MapPin) => void;
   readPins: Set<string>;
+  // Called once the map is ready, passes up a flyTo function for external navigation
+  onFlyTo?: (flyTo: (lng: number, lat: number) => void) => void;
 }
 
 // Build the Mapbox expression that maps topic → colour for individual pins
@@ -29,8 +31,17 @@ const topicColorExpression: mapboxgl.Expression = [
   TOPIC_COLORS.other, // fallback
 ];
 
-export default function BriefedMap({ geojson, onPinClick, readPins }: BriefedMapProps) {
+export default function BriefedMap({ geojson, onPinClick, readPins, onFlyTo }: BriefedMapProps) {
   const mapRef = useRef<MapRef>(null);
+
+  // Register the flyTo function with the parent once — stable reference via ref
+  useEffect(() => {
+    onFlyTo?.((lng, lat) => {
+      mapRef.current?.flyTo({ center: [lng, lat], zoom: 5, duration: 700 });
+    });
+  // onFlyTo intentionally omitted — we only want to register once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleClick = useCallback(
     (event: MapMouseEvent) => {
@@ -111,20 +122,75 @@ export default function BriefedMap({ geojson, onPinClick, readPins }: BriefedMap
           }}
           paint={{ "text-color": "#ffffff" }}
         />
-        {/* Individual pins — read pins are visually demoted (grey, smaller, transparent) */}
+        {/* Individual pins:
+            - Read pins: grey, small, faded
+            - Unread pins: colour + size + opacity fade with age so fresh news pops */}
         <Layer
           id="unclustered-point"
           type="circle"
           filter={["!", ["has", "point_count"]]}
           paint={{
             "circle-color": ["case", ["get", "isRead"], "#6b7280", topicColorExpression],
-            "circle-radius": ["case", ["get", "isRead"], 6, 8],
-            "circle-opacity": ["case", ["get", "isRead"], 0.4, 0.9],
-            "circle-stroke-width": ["case", ["get", "isRead"], 0, 2],
+            // Larger circle for fresher news; read pins stay small
+            "circle-radius": [
+              "case", ["get", "isRead"], 5,
+              ["step", ["get", "ageHours"],
+                9,      // 0–24h: largest
+                24, 8,  // 24–48h
+                48, 7,  // 48–72h
+                72, 6,  // 72h+
+              ],
+            ],
+            // Fade older pins so today's news stands out
+            "circle-opacity": [
+              "case", ["get", "isRead"], 0.35,
+              ["step", ["get", "ageHours"],
+                0.95,     // 0–24h
+                24, 0.72, // 24–48h
+                48, 0.52, // 48–72h
+                72, 0.35, // 72h+
+              ],
+            ],
+            "circle-stroke-width": [
+              "case", ["get", "isRead"], 0,
+              ["step", ["get", "ageHours"],
+                2.5,    // 0–24h: prominent stroke
+                24, 2,  // 24–48h
+                48, 1.5,// 48–72h
+                72, 1,  // 72h+
+              ],
+            ],
             "circle-stroke-color": "#ffffff",
+            "circle-stroke-opacity": [
+              "case", ["get", "isRead"], 0,
+              ["step", ["get", "ageHours"],
+                0.9,     // 0–24h
+                24, 0.65,
+                48, 0.45,
+                72, 0.25,
+              ],
+            ],
           }}
         />
       </Source>
+
+      {/* Zoom controls — right side, vertically centred */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 z-10">
+        <button
+          onClick={() => mapRef.current?.zoomIn()}
+          aria-label="Zoom in"
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-all shadow-lg text-lg font-light select-none"
+        >
+          +
+        </button>
+        <button
+          onClick={() => mapRef.current?.zoomOut()}
+          aria-label="Zoom out"
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-all shadow-lg text-lg font-light select-none"
+        >
+          −
+        </button>
+      </div>
     </Map>
   );
 }

@@ -8,35 +8,39 @@ import BriefedDigest from "@/emails/BriefedDigest";
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-export async function POST(request: NextRequest) {
-  // Verify the request comes from our cron job or an authorized caller
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.PIPELINE_SECRET}`) {
+type DigestPin = { headline: string; topic: string | null; region_label: string | null };
+
+function isAuthorized(request: NextRequest): boolean {
+  const auth = request.headers.get("authorization");
+  return (
+    auth === `Bearer ${process.env.CRON_SECRET}` ||
+    auth === `Bearer ${process.env.PIPELINE_SECRET}`
+  );
+}
+
+async function handle(request: NextRequest): Promise<NextResponse> {
+  if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ── Fetch today's top 2 pins ──────────────────────────────────────────────
+  // ── Fetch today's pins (last 24h) ─────────────────────────────────────────
   const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
-  const { data: pins, error: pinsError } = await supabase
+  const { data: allPins, error: pinsError } = await supabase
     .from("pins")
     .select("headline, topic, region_label")
     .eq("ai_processed", true)
     .not("lat", "is", null)
     .gte("published_at", since)
     .order("published_at", { ascending: false })
-    .limit(2);
+    .limit(50); // fetch enough to cover all topic combinations
 
-  if (pinsError || !pins || pins.length === 0) {
+  if (pinsError || !allPins || allPins.length === 0) {
     console.error("[send-digest] No pins found:", pinsError?.message);
     return NextResponse.json({ error: "No pins available" }, { status: 422 });
   }
 
-  // ── Generate Claude intro ─────────────────────────────────────────────────
-  const intro = await generateDigestIntro(pins.map((p) => p.headline));
-
-  // ── Fetch all subscribed user emails ─────────────────────────────────────
-  // auth.users requires the admin API — .from() can't cross schemas
+  // ── Fetch all users and their preferences ────────────────────────────────
   const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
 
   if (usersError || !usersData?.users?.length) {
@@ -44,40 +48,80 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No users to send to" }, { status: 422 });
   }
 
-  const users = usersData.users;
+  const { data: prefsData } = await supabase
+    .from("user_preferences")
+    .select("user_id, topics");
 
-  // ── Render and send ───────────────────────────────────────────────────────
-  const html = await render(
-    BriefedDigest({
-      intro,
-      pins: pins.map((p) => ({
-        headline: p.headline,
-        topic: p.topic ?? "other",
-        regionLabel: p.region_label,
-      })),
-      appUrl: APP_URL,
-    })
+  const prefsByUserId = new Map<string, string[]>(
+    (prefsData ?? []).map((p: { user_id: string; topics: string[] }) => [p.user_id, p.topics])
   );
 
-  // In dev/sandbox mode, override recipients so we don't need a verified domain.
-  // Remove TEST_EMAIL_OVERRIDE from .env.local when a real domain is set up.
+  // ── In dev mode, send only to the test override address ──────────────────
   const testOverride = process.env.TEST_EMAIL_OVERRIDE;
-  const recipients: string[] = testOverride
-    ? [testOverride]
-    : users.map((u) => u.email).filter((e): e is string => !!e);
 
-  const { data: sendData, error: sendError } = await resend.emails.send({
-    from: "Briefed <onboarding@resend.dev>",
-    to: recipients,
-    subject: "Your world this morning",
-    html,
-  });
+  const recipients = testOverride
+    ? [{ email: testOverride, userId: usersData.users[0]?.id ?? "" }]
+    : usersData.users
+        .filter((u) => !!u.email)
+        .map((u) => ({ email: u.email as string, userId: u.id }));
 
-  if (sendError) {
-    console.error("[send-digest] Resend error:", sendError);
-    return NextResponse.json({ error: sendError.message }, { status: 500 });
+  // ── Send one personalised email per recipient ────────────────────────────
+  let sent = 0;
+  const failures: string[] = [];
+
+  for (const { email, userId } of recipients) {
+    try {
+      const userTopics = prefsByUserId.get(userId) ?? [];
+
+      // Filter pins to the user's preferred topics; fall back to all pins
+      const filteredPins: DigestPin[] =
+        userTopics.length > 0
+          ? allPins.filter((p) => userTopics.includes(p.topic ?? ""))
+          : allPins;
+
+      const digestPins: DigestPin[] = (filteredPins.length > 0 ? filteredPins : allPins).slice(0, 2);
+
+      if (digestPins.length === 0) {
+        console.warn(`[send-digest] No pins for user ${userId} — skipping`);
+        continue;
+      }
+
+      const intro = await generateDigestIntro(digestPins.map((p) => p.headline));
+
+      const html = await render(
+        BriefedDigest({
+          intro,
+          pins: digestPins.map((p) => ({
+            headline: p.headline,
+            topic: p.topic ?? "other",
+            regionLabel: p.region_label,
+          })),
+          appUrl: APP_URL,
+        })
+      );
+
+      const { error: sendError } = await resend.emails.send({
+        from: "Briefed <onboarding@resend.dev>",
+        to: email,
+        subject: "Your world this morning",
+        html,
+      });
+
+      if (sendError) {
+        console.error(`[send-digest] Resend error for ${email}:`, sendError);
+        failures.push(email);
+      } else {
+        sent++;
+      }
+    } catch (err) {
+      console.error(`[send-digest] Unexpected error for ${email}:`, err);
+      failures.push(email);
+    }
   }
 
-  console.log(`[send-digest] Sent to ${recipients.length} users. Resend ID: ${sendData?.id}`);
-  return NextResponse.json({ sent: recipients.length, resendId: sendData?.id });
+  console.log(`[send-digest] Sent: ${sent}, Failed: ${failures.length}`);
+  return NextResponse.json({ sent, failures });
 }
+
+export const GET = handle;
+export const POST = handle;

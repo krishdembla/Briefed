@@ -42,7 +42,7 @@ export default function AuthPage() {
       if (error) {
         setError(error.message);
       } else {
-        setMessage("Check your email to confirm your account, then sign in.");
+        setMessage("Check your email to confirm your account. Once confirmed, sign in and we'll set up your digest.");
         switchMode("signin");
       }
     }
