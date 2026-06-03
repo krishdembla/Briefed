@@ -11,7 +11,7 @@ const CLUSTER_PROMPT = fs.readFileSync(
 // Articles scoring below this are considered not newsworthy enough for the map.
 // Set to 4 so regional stories (Africa, South America, SE Asia) that score 4–5
 // survive alongside the higher-stakes political and conflict news.
-const IMPORTANCE_THRESHOLD = 3;
+const IMPORTANCE_THRESHOLD = 5;
 
 interface ClusterResult {
   keepIndex: number;
