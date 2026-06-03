@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const ONBOARDED_COOKIE = "briefed_onboarded";
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -30,9 +32,11 @@ export async function middleware(request: NextRequest) {
   const isAuthPage = pathname.startsWith("/auth");
   const isResetPassword = pathname.startsWith("/auth/reset-password");
   const isOnboarding = pathname.startsWith("/onboarding");
+  const isAdmin = pathname.startsWith("/admin");
   const isPublic = isAuthPage || isOnboarding;
+  const hasOnboarded = request.cookies.has(ONBOARDED_COOKIE);
 
-  // Unauthenticated users can only access /auth (not /onboarding or any other page)
+  // Unauthenticated users can only access /auth
   if (!user && !isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
@@ -43,13 +47,16 @@ export async function middleware(request: NextRequest) {
   // accessible because the recovery session is established before the form loads.
   if (user && isAuthPage && !isResetPassword) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = hasOnboarded ? "/" : "/onboarding";
     return NextResponse.redirect(url);
   }
 
-  // Let authenticated users access /onboarding freely
-  if (user && isPublic) {
-    return supabaseResponse;
+  // Send authenticated users who haven't onboarded to /onboarding.
+  // Skip this for /onboarding itself and /admin (admin bypasses onboarding).
+  if (user && !isPublic && !isAdmin && !hasOnboarded) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/onboarding";
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;

@@ -36,9 +36,16 @@ export default function QuizModal({ pins, onClose }: QuizModalProps) {
   }, [pins]);
 
   function handleSelect(idx: number) {
-    if (phase !== "question") return;
+    if (phase !== "question" || !quiz) return;
     setSelected(idx);
     setPhase("revealed");
+
+    // Fire-and-forget — don't block the UI on this
+    fetch("/api/quiz/attempt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correct: idx === quiz.correctIndex }),
+    }).catch(() => { /* non-critical */ });
   }
 
   const isCorrect = selected === quiz?.correctIndex;

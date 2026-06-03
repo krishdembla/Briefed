@@ -71,6 +71,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [checkins, setCheckins] = useState<CheckinRow[]>([]);
+  const [quizAccuracy, setQuizAccuracy] = useState<{ correct: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [shared, setShared] = useState(false);
   const shareCardRef = useRef<HTMLDivElement>(null);
@@ -82,14 +83,27 @@ export default function ProfilePage() {
       if (!user) { router.push("/auth"); return; }
       setEmail(user.email ?? null);
 
-      const { data: rows, error } = await supabase
-        .from("checkins")
-        .select("date, pins_read")
-        .eq("user_id", user.id)
-        .order("date", { ascending: false })
-        .limit(90);
+      const [checkinsResult, attemptsResult] = await Promise.all([
+        supabase
+          .from("checkins")
+          .select("date, pins_read")
+          .eq("user_id", user.id)
+          .order("date", { ascending: false })
+          .limit(90),
+        supabase
+          .from("quiz_attempts")
+          .select("correct")
+          .eq("user_id", user.id),
+      ]);
 
-      if (!error && rows) setCheckins(rows as CheckinRow[]);
+      if (!checkinsResult.error && checkinsResult.data) {
+        setCheckins(checkinsResult.data as CheckinRow[]);
+      }
+      if (!attemptsResult.error && attemptsResult.data && attemptsResult.data.length > 0) {
+        const total = attemptsResult.data.length;
+        const correct = attemptsResult.data.filter((a: { correct: boolean }) => a.correct).length;
+        setQuizAccuracy({ correct, total });
+      }
       setLoading(false);
     });
   }, [router]);
@@ -178,18 +192,24 @@ export default function ProfilePage() {
         </div>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-center">
             <p className="text-2xl font-bold text-orange-400">{stats.streak}</p>
             <p className="text-zinc-500 text-xs mt-1">Day streak</p>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-center">
+            <p className="text-2xl font-bold text-white">{stats.longest}</p>
+            <p className="text-zinc-500 text-xs mt-1">Best streak</p>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-center">
             <p className="text-2xl font-bold text-white">{stats.total}</p>
             <p className="text-zinc-500 text-xs mt-1">Check-ins</p>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-center">
-            <p className="text-2xl font-bold text-white">{stats.longest}</p>
-            <p className="text-zinc-500 text-xs mt-1">Best streak</p>
+            <p className="text-2xl font-bold text-emerald-400">
+              {quizAccuracy ? `${Math.round((quizAccuracy.correct / quizAccuracy.total) * 100)}%` : "—"}
+            </p>
+            <p className="text-zinc-500 text-xs mt-1">Quiz accuracy</p>
           </div>
         </div>
 
