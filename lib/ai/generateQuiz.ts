@@ -3,10 +3,7 @@ import path from "path";
 import { anthropic, CLAUDE_MODEL } from "./client";
 import type { MapPin } from "@/types/map";
 
-const QUIZ_PROMPT = fs.readFileSync(
-  path.join(process.cwd(), "prompts/quiz-question.txt"),
-  "utf-8"
-);
+const PROMPT_PATH = path.join(process.cwd(), "prompts/quiz-question.txt");
 
 export interface QuizQuestion {
   question: string;
@@ -21,7 +18,7 @@ export async function generateQuiz(
   pin1: MapPin,
   pin2: MapPin
 ): Promise<QuizQuestion | null> {
-  const prompt = QUIZ_PROMPT
+  const prompt = fs.readFileSync(PROMPT_PATH, "utf-8")
     .replace("{{HEADLINE_1}}", pin1.headline)
     .replace("{{SUMMARY_1}}", pin1.summary ?? pin1.headline)
     .replace("{{HEADLINE_2}}", pin2.headline)
@@ -37,7 +34,9 @@ export async function generateQuiz(
     const raw = message.content[0];
     if (raw.type !== "text") return null;
 
-    const parsed = JSON.parse(raw.text.trim()) as QuizQuestion;
+    // Claude occasionally wraps JSON in markdown fences despite the prompt; strip them.
+    const text = raw.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    const parsed = JSON.parse(text) as QuizQuestion;
 
     // Basic shape validation
     if (

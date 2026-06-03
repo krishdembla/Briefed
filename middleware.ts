@@ -28,6 +28,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isAuthPage = pathname.startsWith("/auth");
+  const isResetPassword = pathname.startsWith("/auth/reset-password");
   const isOnboarding = pathname.startsWith("/onboarding");
   const isPublic = isAuthPage || isOnboarding;
 
@@ -38,8 +39,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Authenticated users don't need to see the auth page
-  if (user && isAuthPage) {
+  // Authenticated users don't need the auth page — but reset-password must stay
+  // accessible because the recovery session is established before the form loads.
+  if (user && isAuthPage && !isResetPassword) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);

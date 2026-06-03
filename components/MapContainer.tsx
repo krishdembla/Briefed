@@ -18,6 +18,7 @@ const BriefedMap = dynamic(() => import("./BriefedMap"), { ssr: false });
 
 const TODAY = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 const STORAGE_KEY = `briefed-checkin-${TODAY}`;
+const QUIZ_SHOWN_KEY = `briefed-quiz-shown-${TODAY}`;
 
 function loadReadPins(): Set<string> {
   try {
@@ -33,6 +34,22 @@ function saveReadPins(ids: Set<string>) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
   } catch {
     // localStorage unavailable — silently continue
+  }
+}
+
+function wasQuizShownToday(): boolean {
+  try {
+    return localStorage.getItem(QUIZ_SHOWN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markQuizShownToday() {
+  try {
+    localStorage.setItem(QUIZ_SHOWN_KEY, "1");
+  } catch {
+    // ignore
   }
 }
 
@@ -100,9 +117,10 @@ export default function MapContainer() {
         .then(setStreak)
         .catch(console.error);
 
-      // Show quiz once per day using two of the read pins
-      if (!quizShownRef.current) {
+      // Show quiz once per day — check localStorage so it doesn't re-appear on reload
+      if (!quizShownRef.current && !wasQuizShownToday()) {
         quizShownRef.current = true;
+        markQuizShownToday();
         const readIds = [...readPins];
         const selectedPins = readIds
           .slice(0, 2)

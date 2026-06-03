@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAnon } from "@/lib/db/supabase-anon";
+import { supabase } from "@/lib/db/supabase";
 import { generateQuiz } from "@/lib/ai/generateQuiz";
 import type { MapPin } from "@/types/map";
 
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAnon
+  const { data, error } = await supabase
     .from("pins")
     .select("id, headline, summary, stat_1, stat_2, stat_3, topic, source_name, source_url, published_at, lat, lng, country_code, region_label")
     .in("id", pinIds);

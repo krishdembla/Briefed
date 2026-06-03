@@ -107,16 +107,38 @@ export default function ProfilePage() {
   async function handleShare() {
     const text = `I'm on a ${stats.streak}-day reading streak on Briefed 🔥\nStay informed, stay consistent.`;
     const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
-    if (nav.share) {
+
+    // Web Share API — works reliably on mobile and HTTPS desktop
+    if (nav.share && window.isSecureContext) {
       try {
         await nav.share({ title: "My Briefed streak", text });
         setShared(true);
-      } catch { /* user cancelled */ }
-    } else {
+        setTimeout(() => setShared(false), 2000);
+        return;
+      } catch {
+        // User cancelled or API unavailable — fall through to clipboard
+      }
+    }
+
+    // Clipboard fallback
+    try {
       await navigator.clipboard.writeText(text);
       setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      // Clipboard blocked (e.g. no user gesture) — fall through to textarea trick
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
     }
-    setTimeout(() => setShared(false), 2000);
   }
 
   if (loading) {
@@ -239,7 +261,11 @@ export default function ProfilePage() {
                   : "bg-white text-zinc-900 hover:bg-zinc-100 active:scale-[0.98]"
               }`}
             >
-              {shared ? "Shared ✓" : (navigator as Navigator & { share?: unknown }).share ? "Share streak" : "Copy to clipboard"}
+              {shared
+                ? "Copied ✓"
+                : (typeof navigator !== "undefined" && (navigator as Navigator & { share?: unknown }).share && window.isSecureContext)
+                  ? "Share streak"
+                  : "Copy to clipboard"}
             </button>
           </div>
         )}
