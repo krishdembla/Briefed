@@ -62,7 +62,7 @@ export default function MapContainer() {
   const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
   const [readPins, setReadPins] = useState<Set<string>>(new Set());
   const [hideRead, setHideRead] = useState(false);
-  const [freshnessDays, setFreshnessDays] = useState(1.5);
+  const [freshnessDays, setFreshnessDays] = useState(5);
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);

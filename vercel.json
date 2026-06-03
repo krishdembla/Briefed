@@ -1,16 +1,9 @@
 {
   "crons": [
-    {
-      "path": "/api/pipeline",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/email/send-digest",
-      "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/email/send-reminder",
-      "schedule": "0 18 * * *"
-    }
+    { "path": "/api/pipeline", "schedule": "0 6 * * *" },
+    { "path": "/api/pipeline", "schedule": "0 13 * * *" },
+    { "path": "/api/pipeline", "schedule": "0 20 * * *" },
+    { "path": "/api/email/send-digest", "schedule": "0 7 * * *" },
+    { "path": "/api/email/send-reminder", "schedule": "0 18 * * *" }
   ]
 }

@@ -21,20 +21,38 @@ const RSS_FEEDS: { url: string; sourceName: string }[] = [
   { url: "https://rss.dw.com/xml/rss-en-world", sourceName: "Deutsche Welle" },
   { url: "https://www.france24.com/en/rss", sourceName: "France 24" },
   { url: "https://www.euronews.com/rss?format=mrss&level=theme&name=news", sourceName: "Euronews" },
-  // Regional — fills Africa, Asia, Latin America gaps
+  // Asia-Pacific
   { url: "https://www.scmp.com/rss/91/feed", sourceName: "South China Morning Post" },
+  { url: "https://feeds.feedburner.com/ndtvnews-world-news", sourceName: "NDTV World" },
+  { url: "https://www.dawn.com/feeds/home", sourceName: "Dawn (Pakistan)" },
+  { url: "https://www.straitstimes.com/news/world/rss.xml", sourceName: "Straits Times" },
+  // Africa
+  { url: "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf", sourceName: "AllAfrica" },
+  { url: "https://www.voanews.com/api/zyrqmesq_t", sourceName: "VOA Africa" },
+  { url: "https://www.dailymaverick.co.za/feed/", sourceName: "Daily Maverick" },
+  // Latin America
+  { url: "https://www.mercopress.com/rss/news.rss", sourceName: "MercoPress" },
+  { url: "https://rss.dw.com/xml/rss-en-lac", sourceName: "DW Latin America" },
+  // Middle East
+  { url: "https://www.middleeasteye.net/rss", sourceName: "Middle East Eye" },
+  // Foreign policy / geopolitics
   { url: "https://foreignpolicy.com/feed/", sourceName: "Foreign Policy" },
+  { url: "https://www.chathamhouse.org/rss.xml", sourceName: "Chatham House" },
   // Tech / AI
   { url: "https://techcrunch.com/feed/", sourceName: "TechCrunch" },
   { url: "https://feeds.arstechnica.com/arstechnica/index", sourceName: "Ars Technica" },
   { url: "https://www.wired.com/feed/rss", sourceName: "Wired" },
+  { url: "https://www.technologyreview.com/feed/", sourceName: "MIT Tech Review" },
   // Climate / environment
   { url: "https://www.carbonbrief.org/feed", sourceName: "Carbon Brief" },
   { url: "https://www.theguardian.com/environment/climate-crisis/rss", sourceName: "Guardian Climate" },
+  { url: "https://insideclimatenews.org/feed/", sourceName: "Inside Climate News" },
   // Health / biotech
   { url: "https://www.statnews.com/feed/", sourceName: "STAT News" },
+  { url: "https://www.who.int/rss-feeds/news-english.xml", sourceName: "WHO" },
   // Economy / markets
   { url: "https://feeds.ft.com/rss/home/uk", sourceName: "Financial Times" },
+  { url: "https://www.imf.org/en/News/rss?language=eng", sourceName: "IMF" },
 ];
 
 // Parses all RSS feeds concurrently. A single failed feed is logged and skipped
