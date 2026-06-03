@@ -179,8 +179,8 @@ async function processArticle(article: RawArticle, runId: string): Promise<Pin> 
     console.error(`[processArticle] summarize failed for "${article.headline.slice(0, 60)}":`, summaryResult.reason);
   }
 
-  // A summary is "done" if it contains real stats, not just the fallback headline
-  const aiProcessed = !!(summary && summary.stat1);
+  // A summary is "done" if it produced a real text summary — stats are a bonus
+  const aiProcessed = !!(summary && summary.summary);
 
   return {
     source_url: article.sourceUrl,

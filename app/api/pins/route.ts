@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/db/supabase";
 
-// Returns geo-tagged, AI-processed pins from the last 7 days.
-// Uses the service role key (server-side only) — pins are public read data but
-// the anon key is blocked by RLS. This route never exposes the key to the browser.
+// Returns geo-tagged pins from the last 7 days.
+// Requires lat/lng (placeable on map) and a headline — summary/stats are optional
+// and the card degrades gracefully when absent.
+// Uses the service role key (server-side only) — never exposed to the browser.
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const rawHours = parseInt(searchParams.get("hours") ?? "168", 10);
@@ -17,9 +18,9 @@ export async function GET(request: NextRequest) {
     .select(
       "id, headline, summary, stat_1, stat_2, stat_3, topic, source_name, source_url, published_at, lat, lng, country_code, region_label"
     )
-    .eq("ai_processed", true)
     .not("lat", "is", null)
     .not("lng", "is", null)
+    .not("headline", "is", null)
     .gte("published_at", since)
     .order("published_at", { ascending: false });
 

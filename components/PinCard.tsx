@@ -23,13 +23,13 @@ export default function PinCard({ pin, isRead, onRead, onClose, relatedPins = []
   const topicColor = TOPIC_COLORS[pin.topic ?? "other"] ?? TOPIC_COLORS.other;
   const topicLabel = TOPIC_LABELS[pin.topic ?? "other"] ?? "Other";
   const stats = [pin.stat_1, pin.stat_2, pin.stat_3].filter(Boolean) as string[];
+  const hasStats = stats.length > 0;
 
   return (
     <div
       className="fixed inset-0 z-20 flex items-end sm:items-center sm:justify-center sm:p-4 bg-zinc-950/75 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
     >
-      {/* Bottom sheet on mobile, centered card on sm+ */}
       <div
         className="w-full sm:max-w-lg bg-zinc-900 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-zinc-800 overflow-y-auto max-h-[88svh] sm:max-h-[90vh] animate-modal-in"
         style={{ borderLeftColor: topicColor, borderLeftWidth: "3px" }}
@@ -39,8 +39,10 @@ export default function PinCard({ pin, isRead, onRead, onClose, relatedPins = []
         <div className="flex justify-center pt-3 pb-1 sm:hidden">
           <div className="w-10 h-1 rounded-full bg-zinc-700" />
         </div>
+
         <div className="px-5 pt-3 sm:pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
-          {/* Top row: topic badge + region + close button */}
+
+          {/* Top row: topic badge + region + close */}
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex flex-wrap items-center gap-2">
               <span
@@ -52,6 +54,7 @@ export default function PinCard({ pin, isRead, onRead, onClose, relatedPins = []
               {pin.region_label && (
                 <span className="text-xs text-zinc-500">{pin.region_label}</span>
               )}
+              <span className="text-xs text-zinc-600">{timeAgo(pin.published_at)}</span>
             </div>
             <button
               onClick={onClose}
@@ -71,39 +74,36 @@ export default function PinCard({ pin, isRead, onRead, onClose, relatedPins = []
 
           {/* Summary */}
           {pin.summary && (
-            <p className="text-zinc-400 text-sm leading-relaxed mb-5">{pin.summary}</p>
+            <p className="text-zinc-400 text-sm leading-relaxed mb-4">{pin.summary}</p>
           )}
 
-          {/* Stats */}
-          {stats.length > 0 && (
-            <div className="grid grid-cols-3 gap-2.5 mb-5">
+          {/* Stats — horizontal chips, works for 1, 2, or 3 */}
+          {hasStats && (
+            <div className="flex flex-wrap gap-2 mb-4">
               {stats.map((stat, i) => (
-                <div
+                <span
                   key={i}
-                  className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl px-3 py-2.5"
+                  className="text-xs font-medium px-3 py-1.5 rounded-full bg-zinc-800 border border-zinc-700/60 text-zinc-300"
                 >
-                  <p className="text-white text-xs font-medium leading-snug">{stat}</p>
-                </div>
+                  {stat}
+                </span>
               ))}
             </div>
           )}
 
-          {/* Footer: source / time + action */}
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs text-zinc-600">
-              <a
-                href={pin.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-zinc-300 underline underline-offset-2 transition-colors"
-              >
-                {pin.source_name}
-              </a>
-              {" "}· {timeAgo(pin.published_at)}
-            </span>
+          {/* Footer: source + action */}
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <a
+              href={pin.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-zinc-600 hover:text-zinc-300 underline underline-offset-2 transition-colors truncate"
+            >
+              {pin.source_name}
+            </a>
             <button
               onClick={() => !isRead && onRead(pin.id)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                 isRead
                   ? "bg-zinc-700/60 text-zinc-500 cursor-default"
                   : "bg-white text-zinc-900 hover:bg-zinc-100 active:scale-[0.97]"
