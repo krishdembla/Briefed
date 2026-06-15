@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { render } from "@react-email/components";
-import { supabase } from "@/lib/db/supabase";
+import { supabase } from "@/lib/db/supabase-service";
 import { generateDigestIntro } from "@/lib/ai/generateDigest";
 import BriefedDigest from "@/emails/BriefedDigest";
 

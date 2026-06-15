@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/db/supabase";
+import { supabase } from "@/lib/db/supabase-service";
 
 // Returns geo-tagged pins from the last 7 days.
 // Requires lat/lng (placeable on map) and a headline — summary/stats are optional

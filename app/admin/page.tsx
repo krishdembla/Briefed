@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/db/supabase-server";
-import { supabase as adminSupabase } from "@/lib/db/supabase";
+import { supabase as adminSupabase } from "@/lib/db/supabase-service";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
