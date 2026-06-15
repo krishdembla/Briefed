@@ -1,4 +1,4 @@
-import MapContainer from "@/components/MapContainer";
+import MapContainer from "@/components/map/MapContainer";
 
 export default function Home() {
   return <MapContainer />;
