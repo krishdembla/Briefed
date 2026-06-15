@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { anthropic, CLAUDE_MODEL } from "./client";
+import { callLLM } from "./client";
 
 const DIGEST_PROMPT = fs.readFileSync(
   path.join(process.cwd(), "prompts/email-digest.txt"),
@@ -14,17 +14,11 @@ export async function generateDigestIntro(headlines: string[]): Promise<string> 
   const prompt = DIGEST_PROMPT.replace("{{headlines}}", headlineList);
 
   try {
-    const message = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: 100,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const text = message.content[0].type === "text" ? message.content[0].text.trim() : "";
+    const text = (await callLLM(prompt, 100)).trim();
     console.log(`[generateDigest] Intro: "${text}"`);
     return text || fallbackIntro();
   } catch (err) {
-    console.error("[generateDigest] Claude call failed, using fallback:", err);
+    console.error("[generateDigest] LLM call failed, using fallback:", err);
     return fallbackIntro();
   }
 }
