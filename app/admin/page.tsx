@@ -65,6 +65,7 @@ export default async function AdminPage() {
   }
 
   const today = new Date().toISOString().slice(0, 10);
+  // eslint-disable-next-line react-hooks/purity
   const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
   // Parallel data fetch

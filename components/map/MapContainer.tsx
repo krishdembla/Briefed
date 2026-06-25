@@ -82,6 +82,7 @@ export default function MapContainer() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReadPins(loadReadPins());
   }, []);
 
@@ -152,6 +153,7 @@ export default function MapContainer() {
   // Filter pins by topic + freshness + hideRead (shared by feed and map)
   const filteredPins = useMemo<MapPin[]>(() => {
     if (activeTopic === "trending") return trendingPins;
+    // eslint-disable-next-line react-hooks/purity
     const cutoff = Date.now() - freshnessDays * 24 * 60 * 60 * 1000;
     let filtered = pins.filter((p) => new Date(p.published_at).getTime() >= cutoff);
     if (activeTopic === "foryou" && userTopics.length > 0) {
@@ -168,6 +170,7 @@ export default function MapContainer() {
   const geojson = useMemo<FeatureCollection<Point>>(() => ({
     type: "FeatureCollection",
     features: filteredPins.map((pin) => {
+      // eslint-disable-next-line react-hooks/purity
       const ageHours = (Date.now() - new Date(pin.published_at).getTime()) / 3_600_000;
       return {
         type: "Feature",
@@ -178,6 +181,7 @@ export default function MapContainer() {
   }), [filteredPins, readPins]);
 
   const topicCounts = useMemo<Record<string, number>>(() => {
+    // eslint-disable-next-line react-hooks/purity
     const cutoff = Date.now() - freshnessDays * 24 * 60 * 60 * 1000;
     const visible = pins.filter((p) => new Date(p.published_at).getTime() >= cutoff);
     const counts: Record<string, number> = { all: visible.length };

@@ -51,7 +51,7 @@ export default function OnboardingModal({ userId, onComplete }: OnboardingModalP
               </p>
               <p className="text-white font-semibold mt-2">What do you follow?</p>
               <p className="text-zinc-500 text-sm mt-1">
-                Pick your interests and we'll personalise your feed and morning email.
+                Pick your interests and we{"'"}ll personalise your feed and morning email.
               </p>
             </div>
 

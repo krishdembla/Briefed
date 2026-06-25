@@ -47,7 +47,7 @@ export default function BriefedReminder({ streak, appUrl }: BriefedReminderProps
 
           <Section style={ctaSection}>
             <Button style={ctaButton} href={appUrl}>
-              Read today's briefing →
+              Read today{"'"}s briefing →
             </Button>
           </Section>
 
@@ -55,7 +55,7 @@ export default function BriefedReminder({ streak, appUrl }: BriefedReminderProps
 
           <Section style={footer}>
             <Text style={footerText}>
-              You're receiving this because you signed up for Briefed.
+              You{"'"}re receiving this because you signed up for Briefed.
             </Text>
           </Section>
         </Container>
