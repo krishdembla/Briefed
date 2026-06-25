@@ -45,6 +45,7 @@ export default function FeedDetail({
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setThreadPins([]);
     fetch(`/api/pins/${pin.id}/related`)
       .then((r) => (r.ok ? r.json() : []))

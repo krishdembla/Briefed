@@ -159,7 +159,7 @@ export default function OnboardingPage() {
           onClick={handleSkip}
           className="w-full mt-3 py-2 text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
         >
-          Skip for now — I'll get everything in my digest
+          Skip for now — I{"'"}ll get everything in my digest
         </button>
       </div>
     </div>

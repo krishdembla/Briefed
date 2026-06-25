@@ -55,6 +55,7 @@ export default async function PinPage({ params }: Props) {
   const stats = [pin.stat_1, pin.stat_2, pin.stat_3].filter(Boolean) as string[];
 
   function timeAgo(iso: string): string {
+    // eslint-disable-next-line react-hooks/purity
     const diff = Date.now() - new Date(iso).getTime();
     const h = Math.floor(diff / 3_600_000);
     if (h < 1) return "just now";

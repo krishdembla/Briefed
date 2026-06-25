@@ -83,14 +83,14 @@ export default function BriefedDigest({ intro, pins, appUrl, unsubscribeUrl }: B
           {/* CTA */}
           <Section style={ctaSection}>
             <Button style={ctaButton} href={appUrl}>
-              Open today's briefing →
+              Open today{"'"}s briefing →
             </Button>
           </Section>
 
           {/* Footer */}
           <Section style={footer}>
             <Text style={footerText}>
-              You're receiving this because you signed up for Briefed.
+              You{"'"}re receiving this because you signed up for Briefed.
             </Text>
             <Text style={footerText}>
               <a href={unsubscribeUrl} style={unsubscribeLink}>Unsubscribe</a>
