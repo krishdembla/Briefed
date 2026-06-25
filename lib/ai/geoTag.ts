@@ -52,9 +52,9 @@ export async function geoTagArticle(
     };
   }
 
-  const mapboxToken = process.env.MAPBOX_PUBLIC_TOKEN;
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   if (!mapboxToken) {
-    throw new Error("Missing env var: MAPBOX_PUBLIC_TOKEN");
+    throw new Error("Missing env var: NEXT_PUBLIC_MAPBOX_TOKEN");
   }
 
   let lat: number | null = null;
