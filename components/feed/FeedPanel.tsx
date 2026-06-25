@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { MapPin, TopicFilter } from "@/types/map";
 import { TOPIC_COLORS, TOPIC_LABELS } from "@/types/map";
+import type { PinTopic } from "@/types/pipeline";
 import FeedCard from "./FeedCard";
 import FeedDetail from "./FeedDetail";
 
-const TOPICS: TopicFilter[] = ["all", "politics", "economy", "conflict", "health", "climate", "tech"];
+const STANDARD_TOPICS: TopicFilter[] = ["all", "politics", "economy", "conflict", "health", "climate", "tech"];
 
 const FRESHNESS_OPTIONS: { days: number; label: string }[] = [
   { days: 1.5, label: "Today" },
@@ -16,10 +17,14 @@ const FRESHNESS_OPTIONS: { days: number; label: string }[] = [
 ];
 
 interface FeedPanelProps {
+  loading?: boolean;
   pins: MapPin[];
   readPins: Set<string>;
+  savedPinIds: Set<string>;
+  userId: string | null;
   activePinId: string | null;
   activeTopic: TopicFilter;
+  userTopics: PinTopic[];
   freshnessDays: number;
   hideRead: boolean;
   topicCounts: Record<string, number>;
@@ -29,6 +34,7 @@ interface FeedPanelProps {
   onOpenPin: (pin: MapPin) => void;
   onCloseExpanded: () => void;
   onMarkRead: (pinId: string) => void;
+  onSaveToggle: (pinId: string, isSaved: boolean) => void;
   onSelectRelated: (pin: MapPin) => void;
   onTopicChange: (topic: TopicFilter) => void;
   onFreshnessChange: (days: number) => void;
@@ -37,9 +43,11 @@ interface FeedPanelProps {
 }
 
 export default function FeedPanel({
-  pins, readPins, activePinId, activeTopic, freshnessDays, hideRead, topicCounts,
+  loading = false,
+  pins, readPins, savedPinIds, userId, activePinId, activeTopic, userTopics,
+  freshnessDays, hideRead, topicCounts,
   expandedPin, expandedPinRelated,
-  onActivate, onOpenPin, onCloseExpanded, onMarkRead, onSelectRelated,
+  onActivate, onOpenPin, onCloseExpanded, onMarkRead, onSaveToggle, onSelectRelated,
   onTopicChange, onFreshnessChange, onToggleHideRead, scrollToPinId,
 }: FeedPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -66,9 +74,12 @@ export default function FeedPanel({
         <FeedDetail
           pin={expandedPin}
           isRead={readPins.has(expandedPin.id)}
+          isSaved={savedPinIds.has(expandedPin.id)}
+          userId={userId}
           relatedPins={expandedPinRelated}
           onBack={onCloseExpanded}
           onRead={onMarkRead}
+          onSaveToggle={(isSaved) => onSaveToggle(expandedPin.id, isSaved)}
           onSelectRelated={onSelectRelated}
         />
       </div>
@@ -90,7 +101,51 @@ export default function FeedPanel({
 
         {/* Topic pills */}
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 pb-2">
-          {TOPICS.map((topic) => {
+          {/* For You pill — only shown when user has saved preferences */}
+          {userTopics.length > 0 && (() => {
+            const isActive = activeTopic === "foryou";
+            const count = topicCounts["foryou"] ?? 0;
+            return (
+              <button
+                key="foryou"
+                onClick={() => onTopicChange("foryou")}
+                className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                  isActive
+                    ? "text-white border-transparent shadow-sm"
+                    : "bg-white text-zinc-700 border-zinc-200 hover:border-zinc-400"
+                }`}
+                style={isActive ? { background: "linear-gradient(135deg, #4f46e5, #0ea5e9)" } : {}}
+              >
+                ✦ {TOPIC_LABELS["foryou"]}
+                {count > 0 && (
+                  <span className={`inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[9px] font-bold rounded-full leading-none ${
+                    isActive ? "bg-white/25 text-white" : "bg-zinc-100 text-zinc-600"
+                  }`}>
+                    {count > 99 ? "99+" : count}
+                  </span>
+                )}
+              </button>
+            );
+          })()}
+
+          {/* Trending pill — always shown */}
+          {(() => {
+            const isActive = activeTopic === "trending";
+            return (
+              <button
+                onClick={() => onTopicChange("trending")}
+                className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                  isActive
+                    ? "text-white border-transparent shadow-sm bg-orange-500"
+                    : "bg-white text-zinc-700 border-zinc-200 hover:border-zinc-400"
+                }`}
+              >
+                🔥 {TOPIC_LABELS["trending"]}
+              </button>
+            );
+          })()}
+
+          {STANDARD_TOPICS.map((topic) => {
             const isActive = activeTopic === topic;
             const color = topic === "all" ? "#4f46e5" : TOPIC_COLORS[topic];
             const count = topicCounts[topic] ?? 0;
@@ -153,12 +208,33 @@ export default function FeedPanel({
 
       {/* Scrollable feed */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {pins.length === 0 && (
+        {loading && (
+          <>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-zinc-100 bg-white p-4 animate-pulse">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-16 h-4 rounded-full bg-zinc-100" />
+                  <div className="w-10 h-4 rounded-full bg-zinc-100 ml-auto" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-zinc-100 rounded-md w-full" />
+                  <div className="h-4 bg-zinc-100 rounded-md w-5/6" />
+                  <div className="h-4 bg-zinc-100 rounded-md w-3/4" />
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <div className="h-6 w-20 rounded-full bg-zinc-100" />
+                  <div className="h-6 w-16 rounded-full bg-zinc-100" />
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+        {!loading && pins.length === 0 && (
           <div className="text-center text-sm text-zinc-500 py-12">
             No stories match these filters.
           </div>
         )}
-        {pins.map((pin) => (
+        {!loading && pins.map((pin) => (
           <FeedCard
             key={pin.id}
             pin={pin}

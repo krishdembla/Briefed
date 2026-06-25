@@ -2,25 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MapPin } from "@/types/map";
-import { TOPIC_COLORS } from "@/types/map";
+import { TOPIC_COLORS, TOPIC_LABELS } from "@/types/map";
+import type { PinTopic } from "@/types/pipeline";
 
 interface SearchBarProps {
   pins: MapPin[];
   onSelectPin: (pin: MapPin) => void;
 }
 
-const MAX_RESULTS = 8;
+const MAX_RESULTS = 12;
+const FILTER_TOPICS: PinTopic[] = ["politics", "economy", "conflict", "health", "climate", "tech"];
 
-function matchPins(pins: MapPin[], query: string): MapPin[] {
+function matchPins(pins: MapPin[], query: string, topicFilter: PinTopic | null): MapPin[] {
   const q = query.toLowerCase().trim();
-  if (!q) return [];
-  return pins
+  let pool = topicFilter ? pins.filter((p) => p.topic === topicFilter) : pins;
+  if (!q) return topicFilter ? pool.slice(0, MAX_RESULTS) : [];
+  return pool
     .filter(
       (p) =>
         p.headline.toLowerCase().includes(q) ||
         (p.region_label ?? "").toLowerCase().includes(q) ||
         (p.country_code ?? "").toLowerCase().includes(q) ||
-        (p.topic ?? "").toLowerCase().includes(q)
+        (p.source_name ?? "").toLowerCase().includes(q)
     )
     .slice(0, MAX_RESULTS);
 }
@@ -28,10 +31,11 @@ function matchPins(pins: MapPin[], query: string): MapPin[] {
 export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [topicFilter, setTopicFilter] = useState<PinTopic | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const results = matchPins(pins, query);
+  const results = matchPins(pins, query, topicFilter);
 
   function expand() {
     setOpen(true);
@@ -41,6 +45,7 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
   function collapse() {
     setOpen(false);
     setQuery("");
+    setTopicFilter(null);
   }
 
   function handleSelect(pin: MapPin) {
@@ -106,8 +111,30 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
         </button>
       </div>
 
+      {/* Topic filter chips */}
+      <div className="mt-2 flex gap-1.5 overflow-x-auto no-scrollbar">
+        {FILTER_TOPICS.map((topic) => {
+          const color = TOPIC_COLORS[topic];
+          const active = topicFilter === topic;
+          return (
+            <button
+              key={topic}
+              onClick={() => setTopicFilter(active ? null : topic)}
+              className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border"
+              style={
+                active
+                  ? { backgroundColor: color + "33", borderColor: color + "88", color }
+                  : { backgroundColor: "transparent", borderColor: "#3f3f46", color: "#71717a" }
+              }
+            >
+              {TOPIC_LABELS[topic]}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Dropdown results */}
-      {query.trim() && (
+      {(query.trim() || topicFilter) && (
         <div className="mt-1.5 bg-zinc-900/95 backdrop-blur-sm border border-zinc-800 rounded-2xl shadow-xl overflow-hidden">
           {results.length === 0 ? (
             <p className="px-4 py-3 text-sm text-zinc-500">No matches found</p>
@@ -115,6 +142,7 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
             <ul>
               {results.map((pin, i) => {
                 const color = TOPIC_COLORS[pin.topic ?? "other"] ?? TOPIC_COLORS.other;
+                const label = TOPIC_LABELS[pin.topic ?? "other"] ?? "Other";
                 return (
                   <li key={pin.id}>
                     <button
@@ -124,11 +152,17 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
                       }`}
                     >
                       <span className="mt-1.5 w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm text-zinc-200 leading-snug line-clamp-2">{pin.headline}</p>
-                        {pin.region_label && (
-                          <p className="text-xs text-zinc-500 mt-0.5">{pin.region_label}</p>
-                        )}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-semibold" style={{ color }}>{label}</span>
+                          {pin.region_label && (
+                            <>
+                              <span className="text-[10px] text-zinc-700">·</span>
+                              <span className="text-[10px] text-zinc-500">{pin.region_label}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </button>
                   </li>
@@ -139,10 +173,10 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
         </div>
       )}
 
-      {/* Hint when input is empty */}
-      {!query.trim() && (
+      {/* Hint when input is empty and no filter active */}
+      {!query.trim() && !topicFilter && (
         <p className="mt-2 text-xs text-zinc-600 text-center">
-          Type a headline, region, or topic
+          Filter by topic or type to search
         </p>
       )}
     </div>

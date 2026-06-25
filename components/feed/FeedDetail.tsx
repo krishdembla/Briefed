@@ -1,14 +1,28 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { TOPIC_COLORS, TOPIC_LABELS, type MapPin } from "@/types/map";
+import AlbumPicker from "./AlbumPicker";
 
 interface FeedDetailProps {
   pin: MapPin;
   isRead: boolean;
+  isSaved: boolean;
+  userId: string | null;
   relatedPins: MapPin[];
   onBack: () => void;
   onRead: (pinId: string) => void;
+  onSaveToggle: (isSaved: boolean) => void;
   onSelectRelated: (pin: MapPin) => void;
+}
+
+const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
+
+function copyPinUrl(pinId: string): void {
+  const url = `${APP_URL}/pin/${pinId}`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).catch(() => {});
+  }
 }
 
 function timeAgo(iso: string): string {
@@ -19,13 +33,35 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export default function FeedDetail({ pin, isRead, relatedPins, onBack, onRead, onSelectRelated }: FeedDetailProps) {
+export default function FeedDetail({
+  pin, isRead, isSaved, userId, relatedPins,
+  onBack, onRead, onSaveToggle, onSelectRelated,
+}: FeedDetailProps) {
   const topicColor = TOPIC_COLORS[pin.topic ?? "other"] ?? TOPIC_COLORS.other;
   const topicLabel = TOPIC_LABELS[pin.topic ?? "other"] ?? "Other";
   const stats = [pin.stat_1, pin.stat_2, pin.stat_3].filter(Boolean) as string[];
+  const [showPicker, setShowPicker] = useState(false);
+  const [threadPins, setThreadPins] = useState<MapPin[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setThreadPins([]);
+    fetch(`/api/pins/${pin.id}/related`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setThreadPins)
+      .catch(() => []);
+  }, [pin.id]);
+
+  const touchStartX = useRef(0);
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div
+      className="flex flex-col h-full bg-white relative"
+      onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+      onTouchEnd={(e) => {
+        if (e.changedTouches[0].clientX - touchStartX.current > 60) onBack();
+      }}
+    >
       {/* Back bar */}
       <div
         className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-zinc-200 bg-white/80 backdrop-blur-md"
@@ -85,17 +121,100 @@ export default function FeedDetail({ pin, isRead, relatedPins, onBack, onRead, o
           >
             {pin.source_name}
           </a>
-          <button
-            onClick={() => !isRead && onRead(pin.id)}
-            className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-              isRead
-                ? "bg-zinc-100 text-zinc-400 cursor-default"
-                : "bg-zinc-900 text-white hover:bg-zinc-700 active:scale-[0.97]"
-            }`}
-          >
-            {isRead ? "Read ✓" : "Mark as read"}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Share button — copies /pin/:id URL to clipboard */}
+            <button
+              onClick={() => {
+                copyPinUrl(pin.id);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              title="Copy link"
+              className="w-8 h-8 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all"
+            >
+              {copied ? (
+                <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              )}
+            </button>
+
+            {/* Save button — only shown when user is signed in */}
+            {userId && (
+              <button
+                onClick={() => setShowPicker(true)}
+                title={isSaved ? "Saved" : "Save to collection"}
+                className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${
+                  isSaved
+                    ? "text-indigo-600 bg-indigo-50"
+                    : "text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50"
+                }`}
+              >
+                <svg
+                  className="w-4.5 h-4.5"
+                  fill={isSaved ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                  />
+                </svg>
+              </button>
+            )}
+            <button
+              onClick={() => !isRead && onRead(pin.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                isRead
+                  ? "bg-zinc-100 text-zinc-400 cursor-default"
+                  : "bg-zinc-900 text-white hover:bg-zinc-700 active:scale-[0.97]"
+              }`}
+            >
+              {isRead ? "Read ✓" : "Mark as read"}
+            </button>
+          </div>
         </div>
+
+        {threadPins.length > 0 && (
+          <div className="mt-2 pt-4 border-t border-zinc-100">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+              Story updates
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {threadPins.map((thread) => {
+                const threadColor = TOPIC_COLORS[thread.topic ?? "other"] ?? TOPIC_COLORS.other;
+                return (
+                  <button
+                    key={thread.id}
+                    onClick={() => onSelectRelated(thread)}
+                    className="flex items-start gap-2.5 text-left group w-full rounded-xl px-2.5 py-2.5 hover:bg-zinc-50 border border-transparent hover:border-zinc-200 transition-all"
+                  >
+                    <span
+                      className="mt-1.5 w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: threadColor }}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm text-zinc-800 group-hover:text-zinc-900 leading-snug line-clamp-2 transition-colors">
+                        {thread.headline}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-0.5">
+                        {thread.region_label && `${thread.region_label} · `}
+                        {timeAgo(thread.published_at)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {relatedPins.length > 0 && (
           <div className="mt-2 pt-4 border-t border-zinc-100">
@@ -127,6 +246,19 @@ export default function FeedDetail({ pin, isRead, relatedPins, onBack, onRead, o
           </div>
         )}
       </div>
+
+      {/* Album picker sheet — slides up from bottom within FeedDetail */}
+      {showPicker && userId && (
+        <AlbumPicker
+          pinId={pin.id}
+          userId={userId}
+          onClose={() => setShowPicker(false)}
+          onSavedChange={(saved) => {
+            onSaveToggle(saved);
+            if (!saved) setShowPicker(false);
+          }}
+        />
+      )}
     </div>
   );
 }
