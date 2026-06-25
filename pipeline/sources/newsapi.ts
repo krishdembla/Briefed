@@ -78,12 +78,20 @@ export async function fetchFromNewsApi(): Promise<RawArticle[]> {
         language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
       },
     }),
-    // Tech / AI / cyber
+    // Tech / AI / cyber — topic-first, not brand-first
     fetchWithRetry<NewsApiResponse>({
       ...everythingBase,
       params: {
-        q: "\"artificial intelligence\" OR cybersecurity OR Apple OR Google OR Microsoft OR OpenAI OR semiconductor OR \"big tech\" OR robotics OR \"tech regulation\" OR deepfake OR quantum",
+        q: "\"artificial intelligence\" OR \"machine learning\" OR cybersecurity OR semiconductor OR quantum OR robotics OR \"AI regulation\" OR deepfake OR \"data breach\" OR \"open source\" OR \"tech startup\" OR \"venture capital\"",
         language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
+      },
+    }),
+    // Big tech company news — separate query so it doesn't crowd out topic signals
+    fetchWithRetry<NewsApiResponse>({
+      ...everythingBase,
+      params: {
+        q: "OpenAI OR \"Google DeepMind\" OR Microsoft OR Apple OR Nvidia OR Samsung OR Huawei OR TSMC OR Meta OR Anthropic OR ByteDance",
+        language: "en", sortBy: "publishedAt", pageSize: 30, apiKey,
       },
     }),
     // Climate / environment / natural disasters
@@ -94,11 +102,11 @@ export async function fetchFromNewsApi(): Promise<RawArticle[]> {
         language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
       },
     }),
-    // Health / medicine / outbreaks
+    // Health / medicine / outbreaks — broader criteria
     fetchWithRetry<NewsApiResponse>({
       ...everythingBase,
       params: {
-        q: "WHO OR pandemic OR vaccine OR outbreak OR FDA OR \"cancer research\" OR \"mental health\" OR Ebola OR \"drug approval\" OR \"bird flu\" OR mpox OR antimicrobial",
+        q: "WHO OR pandemic OR vaccine OR outbreak OR FDA OR EMA OR \"clinical trial\" OR \"drug approval\" OR \"bird flu\" OR mpox OR antimicrobial OR \"public health\" OR \"disease outbreak\"",
         language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
       },
     }),

@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { supabase } from "@/lib/db/supabase-service";
 import { fetchFromNewsApi } from "./sources/newsapi";
 import { fetchFromFinnhub } from "./sources/finnhub";
@@ -6,6 +7,7 @@ import { deduplicate } from "./deduplicate";
 import { clusterByEvent } from "@/lib/ai/clusterByEvent";
 import { processArticle as processArticleLLM } from "@/lib/ai/processArticle";
 import { sendAlertEmail } from "@/lib/email/alerts";
+import { detectThreads } from "@/lib/ai/detectThreads";
 import type { Pin, RawArticle } from "@/types/pipeline";
 
 const RATE_LIMIT_MINUTES = 30;
@@ -91,8 +93,8 @@ export async function runPipeline(): Promise<PipelineResult> {
   // One Claude call for the whole batch — groups articles covering the same
   // event and drops anything below importance threshold (e.g. celebrity news).
   const clustered = await clusterByEvent(freshArticles);
-  // Hard cap to stay within LLM API token limits (2 calls × ~1k tokens × N articles)
-  const MAX_ARTICLES = 75;
+  // Hard cap — paid tier can handle more, but 100 keeps cost predictable (~$0.05/run).
+  const MAX_ARTICLES = 100;
   const importantArticles = clustered.slice(0, MAX_ARTICLES);
   console.log(`[pipeline] After clustering + importance filter: ${clustered.length} articles (capped to ${importantArticles.length})`);
 
@@ -102,9 +104,9 @@ export async function runPipeline(): Promise<PipelineResult> {
   }
 
   // ── Steps 4 + 5: One combined LLM call per article (summary + geo) ─
-  // BATCH_SIZE=8 + 1s delay ≈ ~30 req/min — within Groq's free-tier limits.
-  const BATCH_SIZE = 8;
-  const BATCH_DELAY_MS = 1000;
+  // Paid-tier Groq allows much higher throughput — batch 20 at once with minimal delay.
+  const BATCH_SIZE = 20;
+  const BATCH_DELAY_MS = 200;
   const pins: Pin[] = [];
   let pinsAiDone = 0;
 
@@ -123,6 +125,7 @@ export async function runPipeline(): Promise<PipelineResult> {
       } else {
         const msg = `Failed to process article "${batch[j].headline.slice(0, 60)}": ${result.reason}`;
         console.error(`[pipeline] ${msg}`);
+        Sentry.captureException(result.reason, { extra: { headline: batch[j].headline } });
         errors.push(msg);
       }
     }
@@ -165,6 +168,17 @@ export async function runPipeline(): Promise<PipelineResult> {
     pinsAiDone,
     errorMsg: errors.length > 0 ? errors.join("; ") : undefined,
   });
+
+  // ── Step 7: Detect story threads ──────────────────────────────────────────
+  // Non-fatal — a failure here must never mark the pipeline run as errored.
+  if (pinsStored > 0) {
+    console.log(`[pipeline] Detecting story threads...`);
+    const threadsFound = await detectThreads(runId).catch((err) => {
+      console.error("[pipeline] Thread detection failed (non-fatal):", err);
+      return 0;
+    });
+    console.log(`[pipeline] Thread detection done: ${threadsFound} relation(s) created`);
+  }
 
   return { runId, pinsFetched, pinsStored, pinsAiDone, errors };
 }
@@ -215,6 +229,10 @@ async function finishRun(
     .eq("id", runId);
 
   if (status === "error") {
+    Sentry.captureMessage(`Pipeline run ${runId} failed`, {
+      level: "error",
+      extra: { runId, ...counts },
+    });
     await sendAlertEmail(
       "Pipeline run failed",
       `Run ID: ${runId}\n\nErrors:\n${counts.errorMsg ?? "unknown"}\n\nStats: fetched=${counts.pinsFetched} stored=${counts.pinsStored} ai_done=${counts.pinsAiDone}`

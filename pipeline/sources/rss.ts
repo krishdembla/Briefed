@@ -43,16 +43,30 @@ const RSS_FEEDS: { url: string; sourceName: string }[] = [
   { url: "https://feeds.arstechnica.com/arstechnica/index", sourceName: "Ars Technica" },
   { url: "https://www.wired.com/feed/rss", sourceName: "Wired" },
   { url: "https://www.technologyreview.com/feed/", sourceName: "MIT Tech Review" },
+  { url: "https://www.theverge.com/rss/index.xml", sourceName: "The Verge" },
+  { url: "https://venturebeat.com/feed/", sourceName: "VentureBeat" },
+  { url: "https://spectrum.ieee.org/feeds/feed.rss", sourceName: "IEEE Spectrum" },
+  // Asia tech / business (reduces US-tech geographic bias)
+  { url: "https://asia.nikkei.com/rss/feed/nar", sourceName: "Nikkei Asia" },
+  { url: "https://techinasia.com/feed", sourceName: "Tech in Asia" },
   // Climate / environment
   { url: "https://www.carbonbrief.org/feed", sourceName: "Carbon Brief" },
   { url: "https://www.theguardian.com/environment/climate-crisis/rss", sourceName: "Guardian Climate" },
   { url: "https://insideclimatenews.org/feed/", sourceName: "Inside Climate News" },
-  // Health / biotech
+  // Health / medicine / science
   { url: "https://www.statnews.com/feed/", sourceName: "STAT News" },
   { url: "https://www.who.int/rss-feeds/news-english.xml", sourceName: "WHO" },
+  { url: "https://www.sciencedaily.com/rss/health_medicine.xml", sourceName: "ScienceDaily Health" },
+  { url: "https://www.nature.com/nature.rss", sourceName: "Nature" },
+  { url: "https://www.science.org/rss/news_current.xml", sourceName: "Science" },
   // Economy / markets
   { url: "https://feeds.ft.com/rss/home/uk", sourceName: "Financial Times" },
   { url: "https://www.imf.org/en/News/rss?language=eng", sourceName: "IMF" },
+  // Africa — additional sources
+  { url: "https://www.premiumtimesng.com/feed", sourceName: "Premium Times Nigeria" },
+  { url: "https://www.theeastafrican.co.ke/tea/rss", sourceName: "The East African" },
+  // Latin America — additional
+  { url: "https://agenciabrasil.ebc.com.br/en/rss/ultimasnoticias/feed.rss", sourceName: "Agência Brasil" },
 ];
 
 // Parses all RSS feeds concurrently. A single failed feed is logged and skipped

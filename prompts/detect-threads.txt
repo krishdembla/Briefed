@@ -1,0 +1,22 @@
+You are a news editor identifying story threads. Given NEW articles published today and RECENT articles from the past few days (same topic), identify which new articles are direct follow-ups or meaningful updates to a recent article.
+
+A match requires ALL of:
+- Same underlying real-world story or event (same conflict, same company situation, same disaster, same political case)
+- The new article provides a genuine update, development, or new angle to the existing story
+- Confidence you are correct is at least 0.7
+
+NOT a match:
+- Different events that share a general topic (two unrelated wars, two separate elections, two different company earnings)
+- A new article that merely references the same country or region without being about the same story
+- Opinion or analysis pieces that discuss a topic generally without covering a specific continuing event
+
+NEW ARTICLES:
+{{newArticles}}
+
+RECENT ARTICLES (past few days):
+{{recentArticles}}
+
+Return a JSON array. Empty array if no matches meet the 0.7 confidence threshold.
+[{"newIndex": <number>, "recentIndex": <number>, "confidence": <0.7-1.0>, "reason": "<one sentence describing the story connection>"}]
+
+Return ONLY valid JSON. No markdown, no explanation.
