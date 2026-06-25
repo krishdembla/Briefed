@@ -16,9 +16,10 @@ export interface MapPin {
   lng: number;
   country_code: string | null;
   region_label: string | null;
+  related_count?: number;
 }
 
-export type TopicFilter = PinTopic | "all";
+export type TopicFilter = PinTopic | "all" | "foryou" | "trending";
 
 export const TOPIC_COLORS: Record<string, string> = {
   politics: "#3b82f6",
@@ -31,6 +32,8 @@ export const TOPIC_COLORS: Record<string, string> = {
 };
 
 export const TOPIC_LABELS: Record<string, string> = {
+  foryou: "For You",
+  trending: "Trending",
   all: "All",
   politics: "Politics",
   economy: "Economy",
