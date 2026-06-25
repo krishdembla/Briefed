@@ -58,7 +58,7 @@ export default function OnboardingPage() {
       const topics = selected.size > 0 ? [...selected] : SELECTABLE_TOPICS;
       await savePreferences(data.user.id, topics);
       markOnboarded();
-      router.push("/");
+      router.push("/map");
       router.refresh();
     } catch (err) {
       console.error("[onboarding] Save failed:", err);
@@ -69,7 +69,7 @@ export default function OnboardingPage() {
 
   function handleSkip() {
     markOnboarded();
-    router.push("/");
+    router.push("/map");
   }
 
   return (

@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/db/supabase-browser";
+import { getPreferences, savePreferences, getDigestFrequency, saveDigestFrequency, type DigestFrequency } from "@/lib/db/preferences";
+import { TOPIC_COLORS, TOPIC_LABELS } from "@/types/map";
+import type { PinTopic } from "@/types/pipeline";
+import SavedSection from "@/components/profile/SavedSection";
+import ReadingHistory from "@/components/profile/ReadingHistory";
+
+const SELECTABLE_TOPICS: PinTopic[] = ["politics", "economy", "conflict", "health", "climate", "tech"];
 
 const CHECKIN_REQUIRED = 3;
 
@@ -74,6 +81,13 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [shared, setShared] = useState(false);
   const shareCardRef = useRef<HTMLDivElement>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [selectedTopics, setSelectedTopics] = useState<Set<PinTopic>>(new Set());
+  const [savingTopics, setSavingTopics] = useState(false);
+  const [topicsSaved, setTopicsSaved] = useState(false);
+  const [digestFrequency, setDigestFrequency] = useState<DigestFrequency>("daily");
+  const [savingFrequency, setSavingFrequency] = useState(false);
+  const [frequencySaved, setFrequencySaved] = useState(false);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -81,20 +95,57 @@ export default function ProfilePage() {
       const user = data.user;
       if (!user) { router.push("/auth"); return; }
       setEmail(user.email ?? null);
+      setUserId(user.id);
 
-      const checkinsResult = await supabase
-        .from("checkins")
-        .select("date, pins_read")
-        .eq("user_id", user.id)
-        .order("date", { ascending: false })
-        .limit(90);
+      const [checkinsResult, prefs, freq] = await Promise.all([
+        supabase
+          .from("checkins")
+          .select("date, pins_read")
+          .eq("user_id", user.id)
+          .order("date", { ascending: false })
+          .limit(90),
+        getPreferences(user.id).catch(() => [] as PinTopic[]),
+        getDigestFrequency(user.id).catch(() => "daily" as DigestFrequency),
+      ]);
 
       if (!checkinsResult.error && checkinsResult.data) {
         setCheckins(checkinsResult.data as CheckinRow[]);
       }
+      if (prefs.length > 0) {
+        setSelectedTopics(new Set(prefs));
+      }
+      setDigestFrequency(freq);
       setLoading(false);
     });
   }, [router]);
+
+  function toggleTopic(topic: PinTopic) {
+    setSelectedTopics((prev) => {
+      const next = new Set(prev);
+      next.has(topic) ? next.delete(topic) : next.add(topic);
+      return next;
+    });
+  }
+
+  async function handleSaveFrequency(freq: DigestFrequency) {
+    if (!userId) return;
+    setDigestFrequency(freq);
+    setSavingFrequency(true);
+    await saveDigestFrequency(userId, freq).catch(console.error);
+    setSavingFrequency(false);
+    setFrequencySaved(true);
+    setTimeout(() => setFrequencySaved(false), 2000);
+  }
+
+  async function handleSaveTopics() {
+    if (!userId) return;
+    setSavingTopics(true);
+    const topics = selectedTopics.size > 0 ? [...selectedTopics] : SELECTABLE_TOPICS;
+    await savePreferences(userId, topics).catch(console.error);
+    setSavingTopics(false);
+    setTopicsSaved(true);
+    setTimeout(() => setTopicsSaved(false), 2000);
+  }
 
   const stats = computeStats(checkins);
   const days = lastNDays(35); // 5 weeks × 7 days
@@ -156,7 +207,7 @@ export default function ProfilePage() {
       {/* Nav */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-900">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/map")}
           className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
           aria-label="Back to map"
         >
@@ -195,6 +246,12 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Saved collections */}
+        {userId && <SavedSection userId={userId} />}
+
+        {/* Reading history */}
+        {userId && <ReadingHistory userId={userId} />}
+
         {/* Streak calendar */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
           <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">
@@ -229,6 +286,89 @@ export default function ProfilePage() {
             <span className="text-xs text-zinc-600">Missed</span>
             <div className="w-3 h-3 rounded-sm bg-orange-500 ml-2" />
             <span className="text-xs text-zinc-600">Complete</span>
+          </div>
+        </div>
+
+        {/* Topic preferences */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+            Your topics
+          </p>
+          <p className="text-xs text-zinc-600 mb-4">
+            These shape your morning digest and the default feed view.
+          </p>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {SELECTABLE_TOPICS.map((topic) => {
+              const isSelected = selectedTopics.has(topic);
+              const color = TOPIC_COLORS[topic];
+              return (
+                <button
+                  key={topic}
+                  onClick={() => toggleTopic(topic)}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                    isSelected
+                      ? "border-transparent"
+                      : "bg-zinc-800 border-zinc-700 hover:border-zinc-500"
+                  }`}
+                  style={isSelected ? { backgroundColor: color + "18", borderColor: color + "60" } : {}}
+                >
+                  <div
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: isSelected ? color : "#52525b" }}
+                  />
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: isSelected ? color : "#a1a1aa" }}
+                  >
+                    {TOPIC_LABELS[topic]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={handleSaveTopics}
+            disabled={savingTopics}
+            className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              topicsSaved
+                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                : "bg-white text-zinc-900 hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-40"
+            }`}
+          >
+            {topicsSaved ? "Saved ✓" : savingTopics ? "Saving…" : "Save preferences"}
+          </button>
+
+          <div className="mt-5 pt-4 border-t border-zinc-800">
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+              Email digest
+            </p>
+            <p className="text-xs text-zinc-600 mb-3">How often do you want your morning briefing?</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(["daily", "weekdays", "weekly", "off"] as DigestFrequency[]).map((freq) => {
+                const labels: Record<DigestFrequency, string> = {
+                  daily: "Every day",
+                  weekdays: "Weekdays only",
+                  weekly: "Once a week",
+                  off: "Paused",
+                };
+                const isActive = digestFrequency === freq;
+                return (
+                  <button
+                    key={freq}
+                    onClick={() => handleSaveFrequency(freq)}
+                    disabled={savingFrequency}
+                    className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                      isActive
+                        ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-400"
+                        : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                    }`}
+                  >
+                    {labels[freq]}
+                    {isActive && frequencySaved ? " ✓" : ""}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
