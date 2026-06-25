@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { anthropic, CLAUDE_MODEL } from "./client";
+import { callLLM } from "./client";
 import type { AISummary, PinTopic } from "@/types/pipeline";
 
 const SUMMARIZE_PROMPT = fs.readFileSync(
@@ -16,40 +16,34 @@ function isValidTopic(value: string): value is PinTopic {
   return VALID_TOPICS.includes(value as PinTopic);
 }
 
-// Summarizes an article via Claude and returns a structured card.
+// Summarizes an article via the LLM and returns a structured card.
 // On failure, returns a minimal fallback so the pin is still stored.
 export async function summarizeArticle(
   headline: string,
   body: string
 ): Promise<AISummary> {
-  const bodyExcerpt = body.slice(0, 1000);
+  const bodyExcerpt = body.slice(0, 3000);
 
   const prompt = SUMMARIZE_PROMPT
     .replace("{{headline}}", headline)
     .replace("{{bodyExcerpt}}", bodyExcerpt);
 
   try {
-    const message = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: 400,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const raw = await callLLM(prompt, 800);
+    console.log(`[summarize] raw output for "${headline.slice(0, 60)}...": ${raw}`);
+    const text = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    const parsed = JSON.parse(text) as Record<string, string>;
 
-    const raw = message.content[0].type === "text" ? message.content[0].text : "";
-    console.log(`[summarize] Claude raw output for "${headline.slice(0, 60)}...": ${raw}`);
-
-    const parsed = JSON.parse(raw) as Record<string, string>;
-
-    // Validate shape before trusting it
-    if (!parsed.summary || !parsed.stat1 || !parsed.stat2 || !parsed.stat3 || !parsed.topic) {
+    // Only summary and topic are required — stats are optional (UI handles 0–3 gracefully)
+    if (!parsed.summary || !parsed.topic) {
       throw new Error(`Incomplete JSON response: ${raw}`);
     }
 
     return {
       summary: parsed.summary,
-      stat1: parsed.stat1,
-      stat2: parsed.stat2,
-      stat3: parsed.stat3,
+      stat1: parsed.stat1 || "",
+      stat2: parsed.stat2 || "",
+      stat3: parsed.stat3 || "",
       topic: isValidTopic(parsed.topic) ? parsed.topic : "other",
     };
   } catch (err) {

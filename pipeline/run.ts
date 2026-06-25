@@ -1,12 +1,13 @@
-import { supabase } from "@/lib/db/supabase";
+import * as Sentry from "@sentry/nextjs";
+import { supabase } from "@/lib/db/supabase-service";
 import { fetchFromNewsApi } from "./sources/newsapi";
 import { fetchFromFinnhub } from "./sources/finnhub";
 import { fetchFromRss } from "./sources/rss";
 import { deduplicate } from "./deduplicate";
 import { clusterByEvent } from "@/lib/ai/clusterByEvent";
-import { geoTagArticle } from "@/lib/ai/geoTag";
-import { summarizeArticle } from "@/lib/ai/summarize";
-import { sendAlertEmail } from "@/lib/alerts";
+import { processArticle as processArticleLLM } from "@/lib/ai/processArticle";
+import { sendAlertEmail } from "@/lib/email/alerts";
+import { detectThreads } from "@/lib/ai/detectThreads";
 import type { Pin, RawArticle } from "@/types/pipeline";
 
 const RATE_LIMIT_MINUTES = 30;
@@ -91,17 +92,21 @@ export async function runPipeline(): Promise<PipelineResult> {
   // ── Step 3: Cluster same-event duplicates + importance filter ──
   // One Claude call for the whole batch — groups articles covering the same
   // event and drops anything below importance threshold (e.g. celebrity news).
-  const importantArticles = await clusterByEvent(freshArticles);
-  console.log(`[pipeline] After clustering + importance filter: ${importantArticles.length} articles`);
+  const clustered = await clusterByEvent(freshArticles);
+  // Hard cap — paid tier can handle more, but 100 keeps cost predictable (~$0.05/run).
+  const MAX_ARTICLES = 100;
+  const importantArticles = clustered.slice(0, MAX_ARTICLES);
+  console.log(`[pipeline] After clustering + importance filter: ${clustered.length} articles (capped to ${importantArticles.length})`);
 
   if (importantArticles.length === 0) {
     await finishRun(runId, "success", { pinsFetched, pinsStored: 0, pinsAiDone: 0 });
     return { runId, pinsFetched, pinsStored: 0, pinsAiDone: 0, errors };
   }
 
-  // ── Steps 4 + 5: Geo-tag and summarize (concurrent per article) ─
-  // Process articles in batches to avoid hammering the Claude API
-  const BATCH_SIZE = 5;
+  // ── Steps 4 + 5: One combined LLM call per article (summary + geo) ─
+  // Paid-tier Groq allows much higher throughput — batch 20 at once with minimal delay.
+  const BATCH_SIZE = 20;
+  const BATCH_DELAY_MS = 200;
   const pins: Pin[] = [];
   let pinsAiDone = 0;
 
@@ -120,11 +125,17 @@ export async function runPipeline(): Promise<PipelineResult> {
       } else {
         const msg = `Failed to process article "${batch[j].headline.slice(0, 60)}": ${result.reason}`;
         console.error(`[pipeline] ${msg}`);
+        Sentry.captureException(result.reason, { extra: { headline: batch[j].headline } });
         errors.push(msg);
       }
     }
 
     console.log(`[pipeline] Processed batch ${Math.floor(i / BATCH_SIZE) + 1} — ${pins.length}/${importantArticles.length} done`);
+
+    // Throttle between batches to stay under Claude API rate limits
+    if (i + BATCH_SIZE < importantArticles.length) {
+      await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
+    }
   }
 
   // ── Step 6: Store ──────────────────────────────────────────────
@@ -158,29 +169,26 @@ export async function runPipeline(): Promise<PipelineResult> {
     errorMsg: errors.length > 0 ? errors.join("; ") : undefined,
   });
 
+  // ── Step 7: Detect story threads ──────────────────────────────────────────
+  // Non-fatal — a failure here must never mark the pipeline run as errored.
+  if (pinsStored > 0) {
+    console.log(`[pipeline] Detecting story threads...`);
+    const threadsFound = await detectThreads(runId).catch((err) => {
+      console.error("[pipeline] Thread detection failed (non-fatal):", err);
+      return 0;
+    });
+    console.log(`[pipeline] Thread detection done: ${threadsFound} relation(s) created`);
+  }
+
   return { runId, pinsFetched, pinsStored, pinsAiDone, errors };
 }
 
-// Processes a single article through geo-tag + summarize, returning a Pin.
-// Never throws — failures are captured in the pin's processed flags.
+// Processes one article via a single combined LLM call (summary + geo).
+// Never throws — failures degrade gracefully into a minimal pin.
 async function processArticle(article: RawArticle, runId: string): Promise<Pin> {
-  const [geoResult, summaryResult] = await Promise.allSettled([
-    geoTagArticle(article.headline, article.body),
-    summarizeArticle(article.headline, article.body),
-  ]);
+  const { summary, location } = await processArticleLLM(article.headline, article.body);
 
-  const geo = geoResult.status === "fulfilled" ? geoResult.value : null;
-  const summary = summaryResult.status === "fulfilled" ? summaryResult.value : null;
-
-  if (geoResult.status === "rejected") {
-    console.error(`[processArticle] geoTag failed for "${article.headline.slice(0, 60)}":`, geoResult.reason);
-  }
-  if (summaryResult.status === "rejected") {
-    console.error(`[processArticle] summarize failed for "${article.headline.slice(0, 60)}":`, summaryResult.reason);
-  }
-
-  // A summary is "done" if it contains real stats, not just the fallback headline
-  const aiProcessed = !!(summary && summary.stat1);
+  const aiProcessed = !!(summary && summary.summary && summary.summary !== article.headline);
 
   return {
     source_url: article.sourceUrl,
@@ -188,18 +196,18 @@ async function processArticle(article: RawArticle, runId: string): Promise<Pin> 
     published_at: article.publishedAt,
     headline: article.headline,
     raw_body: article.body,
-    summary: summary?.summary ?? null,
-    stat_1: summary?.stat1 ?? null,
-    stat_2: summary?.stat2 ?? null,
-    stat_3: summary?.stat3 ?? null,
-    lat: geo?.lat ?? null,
-    lng: geo?.lng ?? null,
-    country_code: geo?.countryCode ?? null,
-    region_label: geo?.regionLabel ?? null,
-    topic: summary?.topic ?? null,
+    summary: summary.summary,
+    stat_1: summary.stat1 || null,
+    stat_2: summary.stat2 || null,
+    stat_3: summary.stat3 || null,
+    lat: location?.lat ?? null,
+    lng: location?.lng ?? null,
+    country_code: location?.countryCode || null,
+    region_label: location?.regionLabel || null,
+    topic: summary.topic,
     pipeline_run_id: runId,
     ai_processed: aiProcessed,
-    geo_processed: !!(geo?.lat),
+    geo_processed: !!location?.lat,
   };
 }
 
@@ -221,6 +229,10 @@ async function finishRun(
     .eq("id", runId);
 
   if (status === "error") {
+    Sentry.captureMessage(`Pipeline run ${runId} failed`, {
+      level: "error",
+      extra: { runId, ...counts },
+    });
     await sendAlertEmail(
       "Pipeline run failed",
       `Run ID: ${runId}\n\nErrors:\n${counts.errorMsg ?? "unknown"}\n\nStats: fetched=${counts.pinsFetched} stored=${counts.pinsStored} ai_done=${counts.pinsAiDone}`

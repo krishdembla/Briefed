@@ -1,7 +1,7 @@
 // Re-runs AI summarization on pins where ai_processed = false.
 // Run after any pipeline that had partial AI failures.
 // Usage: npx tsx --env-file=.env.local scripts/reprocess-failed.ts
-import { supabase } from "../lib/db/supabase";
+import { supabase } from "../lib/db/supabase-service";
 import { summarizeArticle } from "../lib/ai/summarize";
 
 const BATCH_SIZE = 3; // conservative to avoid rate limits
@@ -25,7 +25,7 @@ async function main() {
   for (let i = 0; i < pins.length; i += BATCH_SIZE) {
     const batch = pins.slice(i, i + BATCH_SIZE);
 
-    await Promise.all(batch.map(async (pin) => {
+    await Promise.all(batch.map(async (pin: { id: string; headline: string; raw_body: string | null }) => {
       const summary = await summarizeArticle(pin.headline, pin.raw_body ?? "");
       const aiProcessed = !!summary.stat1;
 

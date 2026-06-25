@@ -40,6 +40,11 @@ export default function OnboardingPage() {
     });
   }
 
+  function markOnboarded() {
+    // 1-year cookie — middleware reads this to skip the onboarding redirect
+    document.cookie = "briefed_onboarded=1; path=/; max-age=31536000; SameSite=Lax";
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -52,7 +57,8 @@ export default function OnboardingPage() {
       // Save whatever they picked — if nothing selected, save all topics
       const topics = selected.size > 0 ? [...selected] : SELECTABLE_TOPICS;
       await savePreferences(data.user.id, topics);
-      router.push("/");
+      markOnboarded();
+      router.push("/map");
       router.refresh();
     } catch (err) {
       console.error("[onboarding] Save failed:", err);
@@ -62,7 +68,8 @@ export default function OnboardingPage() {
   }
 
   function handleSkip() {
-    router.push("/");
+    markOnboarded();
+    router.push("/map");
   }
 
   return (

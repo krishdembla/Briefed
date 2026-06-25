@@ -84,12 +84,12 @@ export default function UserMenu({ userId, userEmail }: UserMenuProps) {
   }
 
   return (
-    <div ref={panelRef} className="absolute top-4 left-4 z-10">
+    <div ref={panelRef} className="absolute left-4 z-10" style={{ top: "calc(1rem + env(safe-area-inset-top, 0px))" }}>
       {/* Avatar button */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="Open profile"
-        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-lg border ${
+        className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-lg border ${
           open
             ? "bg-white text-zinc-900 border-white"
             : "bg-zinc-900/80 backdrop-blur-sm border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-white"
@@ -157,9 +157,15 @@ export default function UserMenu({ userId, userEmail }: UserMenuProps) {
             </button>
           </div>
 
-          {/* Sign out */}
+          {/* Profile + Sign out */}
           <div className="px-4 pb-4">
             <div className="h-px bg-zinc-800 mb-3" />
+            <button
+              onClick={() => router.push("/profile")}
+              className="w-full py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 transition-all mb-2"
+            >
+              View profile & streak
+            </button>
             <button
               onClick={handleSignOut}
               disabled={signingOut}

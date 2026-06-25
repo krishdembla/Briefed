@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/db/supabase";
+import { supabase } from "@/lib/db/supabase-service";
 import type { RawArticle } from "@/types/pipeline";
 
 // Strips tracking query params that cause the same article to appear as different URLs.

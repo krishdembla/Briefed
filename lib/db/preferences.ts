@@ -28,3 +28,29 @@ export async function savePreferences(userId: string, topics: UserTopics): Promi
     throw error;
   }
 }
+
+export type DigestFrequency = "daily" | "weekdays" | "weekly" | "off";
+
+// Returns the user's saved digest frequency, defaulting to 'daily'.
+export async function getDigestFrequency(userId: string): Promise<DigestFrequency> {
+  const supabase = createSupabaseBrowserClient();
+  const { data } = await supabase
+    .from("user_preferences")
+    .select("digest_frequency")
+    .eq("user_id", userId)
+    .single();
+  return (data?.digest_frequency as DigestFrequency) ?? "daily";
+}
+
+// Saves the user's digest frequency preference.
+export async function saveDigestFrequency(userId: string, frequency: DigestFrequency): Promise<void> {
+  const supabase = createSupabaseBrowserClient();
+  const { error } = await supabase
+    .from("user_preferences")
+    .upsert({ user_id: userId, digest_frequency: frequency }, { onConflict: "user_id" });
+
+  if (error) {
+    console.error("[preferences] Failed to save digest frequency:", error.message);
+    throw error;
+  }
+}

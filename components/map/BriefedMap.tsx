@@ -21,6 +21,7 @@ interface BriefedMapProps {
   readPins: Set<string>;
   // Called once the map is ready, passes up a flyTo function for external navigation
   onFlyTo?: (flyTo: (lng: number, lat: number) => void) => void;
+  activePinId?: string | null;
 }
 
 // Build the Mapbox expression that maps topic → colour for individual pins
@@ -31,7 +32,7 @@ const topicColorExpression: mapboxgl.Expression = [
   TOPIC_COLORS.other, // fallback
 ];
 
-export default function BriefedMap({ geojson, onPinClick, readPins, onFlyTo }: BriefedMapProps) {
+export default function BriefedMap({ geojson, onPinClick, onFlyTo, activePinId }: BriefedMapProps) {
   const mapRef = useRef<MapRef>(null);
 
   // Register the flyTo function with the parent once — stable reference via ref
@@ -83,7 +84,7 @@ export default function BriefedMap({ geojson, onPinClick, readPins, onFlyTo }: B
       mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
       initialViewState={{ longitude: 15, latitude: 20, zoom: 2 }}
       style={{ width: "100%", height: "100%" }}
-      mapStyle="mapbox://styles/mapbox/dark-v11"
+      mapStyle="mapbox://styles/mapbox/streets-v12"
       interactiveLayerIds={["clusters", "unclustered-point"]}
       onClick={handleClick}
       onTouchEnd={handleTouchEnd}
@@ -103,11 +104,12 @@ export default function BriefedMap({ geojson, onPinClick, readPins, onFlyTo }: B
           type="circle"
           filter={["has", "point_count"]}
           paint={{
-            "circle-color": "#6366f1",
+            "circle-color": "#4f46e5",
             "circle-radius": ["step", ["get", "point_count"], 18, 5, 26, 20, 36],
-            "circle-opacity": 0.85,
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#818cf8",
+            "circle-opacity": 0.9,
+            "circle-stroke-width": 3,
+            "circle-stroke-color": "#ffffff",
+            "circle-stroke-opacity": 0.85,
           }}
         />
         {/* Cluster count label */}
@@ -121,6 +123,20 @@ export default function BriefedMap({ geojson, onPinClick, readPins, onFlyTo }: B
             "text-size": 13,
           }}
           paint={{ "text-color": "#ffffff" }}
+        />
+        {/* Active-pin pulse halo — rendered below the pin so the dot sits on top */}
+        <Layer
+          id="active-halo"
+          type="circle"
+          filter={["all", ["!", ["has", "point_count"]], ["==", ["get", "id"], activePinId ?? ""]]}
+          paint={{
+            "circle-color": ["case", ["get", "isRead"], "#6b7280", topicColorExpression],
+            "circle-radius": 22,
+            "circle-opacity": 0.18,
+            "circle-stroke-width": 2,
+            "circle-stroke-color": ["case", ["get", "isRead"], "#6b7280", topicColorExpression],
+            "circle-stroke-opacity": 0.55,
+          }}
         />
         {/* Individual pins:
             - Read pins: grey, small, faded
@@ -160,7 +176,7 @@ export default function BriefedMap({ geojson, onPinClick, readPins, onFlyTo }: B
                 72, 1,  // 72h+
               ],
             ],
-            "circle-stroke-color": "#ffffff",
+            "circle-stroke-color": ["case", ["==", ["get", "id"], activePinId ?? ""], "#0f172a", "#ffffff"],
             "circle-stroke-opacity": [
               "case", ["get", "isRead"], 0,
               ["step", ["get", "ageHours"],
@@ -179,14 +195,14 @@ export default function BriefedMap({ geojson, onPinClick, readPins, onFlyTo }: B
         <button
           onClick={() => mapRef.current?.zoomIn()}
           aria-label="Zoom in"
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-all shadow-lg text-lg font-light select-none"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-sm border border-zinc-200 text-zinc-700 hover:text-indigo-600 hover:border-indigo-300 transition-all shadow-lg text-lg font-light select-none"
         >
           +
         </button>
         <button
           onClick={() => mapRef.current?.zoomOut()}
           aria-label="Zoom out"
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-all shadow-lg text-lg font-light select-none"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-sm border border-zinc-200 text-zinc-700 hover:text-indigo-600 hover:border-indigo-300 transition-all shadow-lg text-lg font-light select-none"
         >
           −
         </button>
