@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAnon } from "@/lib/db/supabase-anon";
+import { supabase } from "@/lib/db/supabase-service";
 
-// Returns geo-tagged, AI-processed pins from the last 7 days.
-// Wide window keeps the map populated across topics with lower posting frequency (e.g. climate).
-// Uses the anon key — pins are public data and RLS allows authenticated reads.
+// Returns geo-tagged pins from the last 7 days.
+// Requires lat/lng (placeable on map) and a headline — summary/stats are optional
+// and the card degrades gracefully when absent.
+// Uses the service role key (server-side only) — never exposed to the browser.
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const rawHours = parseInt(searchParams.get("hours") ?? "168", 10);
@@ -12,14 +13,14 @@ export async function GET(request: NextRequest) {
 
   const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await supabaseAnon
+  const { data, error } = await supabase
     .from("pins")
     .select(
       "id, headline, summary, stat_1, stat_2, stat_3, topic, source_name, source_url, published_at, lat, lng, country_code, region_label"
     )
-    .eq("ai_processed", true)
     .not("lat", "is", null)
     .not("lng", "is", null)
+    .not("headline", "is", null)
     .gte("published_at", since)
     .order("published_at", { ascending: false });
 

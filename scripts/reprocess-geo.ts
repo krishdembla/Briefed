@@ -1,6 +1,6 @@
 // Re-runs geo-tagging on pins where geo_processed = false.
 // Usage: npx tsx --env-file=.env.local scripts/reprocess-geo.ts
-import { supabase } from "../lib/db/supabase";
+import { supabase } from "../lib/db/supabase-service";
 import { geoTagArticle } from "../lib/ai/geoTag";
 
 const BATCH_SIZE = 3;
@@ -24,7 +24,7 @@ async function main() {
   for (let i = 0; i < pins.length; i += BATCH_SIZE) {
     const batch = pins.slice(i, i + BATCH_SIZE);
 
-    await Promise.all(batch.map(async (pin) => {
+    await Promise.all(batch.map(async (pin: { id: string; headline: string; raw_body: string | null }) => {
       const geo = await geoTagArticle(pin.headline, pin.raw_body ?? "");
       if (!geo?.lat) return; // Claude returned null location — skip
 

@@ -8,6 +8,10 @@ Rules:
 - Write in second person ("Your world this morning…", "Today's map has…").
 - No clickbait. No exclamation marks. No emoji.
 - The tone is calm, intelligent, and confident — like a well-read friend.
+- If the user has topic interests listed below, subtly lean the teaser toward those themes — do not ignore other stories, just make the sentence feel tailored.
+
+User interest profile:
+{{userProfile}}
 
 Stories:
 {{headlines}}
