@@ -3,6 +3,8 @@ import { Resend } from "resend";
 import { render } from "@react-email/components";
 import { supabase } from "@/lib/db/supabase-service";
 import BriefedReminder from "@/emails/BriefedReminder";
+import { sendAlertEmail } from "@/lib/email/alerts";
+import { computeStreak } from "@/lib/streak";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -13,28 +15,6 @@ function isAuthorized(request: NextRequest): boolean {
     auth === `Bearer ${process.env.CRON_SECRET}` ||
     auth === `Bearer ${process.env.PIPELINE_SECRET}`
   );
-}
-
-// Computes the current consecutive-day streak from an array of completed dates.
-function computeStreak(completedDates: string[]): number {
-  if (completedDates.length === 0) return 0;
-  const dateSet = new Set(completedDates);
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-  const anchor = dateSet.has(yesterday) ? yesterday : null;
-  if (!anchor) return 0;
-
-  let streak = 0;
-  let cursor = new Date(anchor);
-  while (true) {
-    const d = cursor.toISOString().slice(0, 10);
-    if (!dateSet.has(d)) break;
-    streak++;
-    cursor = new Date(cursor.getTime() - 86_400_000);
-  }
-  // Don't count today (they haven't checked in yet — that's why we're nudging)
-  void today;
-  return streak;
 }
 
 async function handle(request: NextRequest): Promise<NextResponse> {
@@ -102,7 +82,7 @@ async function handle(request: NextRequest): Promise<NextResponse> {
         : "Your daily briefing is waiting";
 
       const { error: sendError } = await resend.emails.send({
-        from: "Briefed <onboarding@resend.dev>",
+        from: "Briefed <digest@stay-briefed.com>",
         to: email,
         subject,
         html,
@@ -121,6 +101,14 @@ async function handle(request: NextRequest): Promise<NextResponse> {
   }
 
   console.log(`[send-reminder] Sent: ${sent}, Failed: ${failures.length}`);
+
+  if (failures.length > 0) {
+    await sendAlertEmail(
+      `Reminder send failures (${failures.length})`,
+      `${failures.length} of ${sent + failures.length} reminder emails failed to send.\n\nFailed addresses:\n${failures.join("\n")}`
+    );
+  }
+
   return NextResponse.json({ sent, failures });
 }
 

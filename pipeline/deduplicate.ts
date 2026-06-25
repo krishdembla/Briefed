@@ -1,24 +1,6 @@
 import { supabase } from "@/lib/db/supabase-service";
+import { normalizeUrl } from "@/lib/normalizeUrl";
 import type { RawArticle } from "@/types/pipeline";
-
-// Strips tracking query params that cause the same article to appear as different URLs.
-// e.g. ?utm_source=twitter&utm_medium=social gets dropped.
-function normalizeUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    const TRACKING_PARAMS = [
-      "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-      "ref", "referrer", "fbclid", "gclid", "mc_cid", "mc_eid",
-    ];
-    for (const param of TRACKING_PARAMS) {
-      parsed.searchParams.delete(param);
-    }
-    return parsed.toString().toLowerCase();
-  } catch {
-    // If URL parsing fails, just lowercase the original
-    return url.toLowerCase();
-  }
-}
 
 // Filters out articles already stored in the pins table.
 // Uses a batch query rather than N individual queries.

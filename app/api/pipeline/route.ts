@@ -1,3 +1,4 @@
+import "@/lib/env"; // validates required env vars at module load
 import { NextRequest, NextResponse } from "next/server";
 import { runPipeline } from "@/pipeline/run";
 
