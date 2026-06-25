@@ -19,8 +19,9 @@ export interface DigestPin {
 
 export interface BriefedDigestProps {
   intro: string;          // Claude-generated one-sentence teaser
-  pins: DigestPin[];      // exactly 2 pins
+  pins: DigestPin[];      // 2–4 pins, scored by topic preference
   appUrl: string;         // CTA link, e.g. https://briefed.app
+  unsubscribeUrl: string; // signed one-click unsubscribe URL
 }
 
 const TOPIC_COLORS: Record<string, string> = {
@@ -43,7 +44,7 @@ const TOPIC_LABELS: Record<string, string> = {
   other:    "Other",
 };
 
-export default function BriefedDigest({ intro, pins, appUrl }: BriefedDigestProps) {
+export default function BriefedDigest({ intro, pins, appUrl, unsubscribeUrl }: BriefedDigestProps) {
   return (
     <Html>
       <Head />
@@ -90,6 +91,9 @@ export default function BriefedDigest({ intro, pins, appUrl }: BriefedDigestProp
           <Section style={footer}>
             <Text style={footerText}>
               You're receiving this because you signed up for Briefed.
+            </Text>
+            <Text style={footerText}>
+              <a href={unsubscribeUrl} style={unsubscribeLink}>Unsubscribe</a>
             </Text>
           </Section>
         </Container>
@@ -193,4 +197,9 @@ const footer: React.CSSProperties = {
 const footerText: React.CSSProperties = {
   color: "#52525b",
   fontSize: "11px",
+};
+
+const unsubscribeLink: React.CSSProperties = {
+  color: "#52525b",
+  textDecoration: "underline",
 };
