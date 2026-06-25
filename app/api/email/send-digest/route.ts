@@ -1,3 +1,4 @@
+import "@/lib/env"; // validates required env vars at module load
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { render } from "@react-email/components";
@@ -5,46 +6,11 @@ import { supabase } from "@/lib/db/supabase-service";
 import { generateDigestIntro } from "@/lib/ai/generateDigest";
 import { generateUnsubscribeToken } from "@/app/api/unsubscribe/route";
 import BriefedDigest from "@/emails/BriefedDigest";
+import { sendAlertEmail } from "@/lib/email/alerts";
+import { selectDigestPins, buildSubject, type DigestPin } from "@/lib/digestUtils";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
-type DigestPin = { headline: string; topic: string | null; region_label: string | null };
-
-const TOPIC_LABELS_EMAIL: Record<string, string> = {
-  politics: "Politics", economy: "Economy", conflict: "Conflict",
-  health: "Health", climate: "Climate", tech: "Tech", other: "News",
-};
-
-// Score and rank pins by topic preference; return top 4
-function selectDigestPins(pins: DigestPin[], userTopics: string[]): DigestPin[] {
-  if (userTopics.length === 0) return pins.slice(0, 4);
-  const topicSet = new Set(userTopics);
-  return [...pins]
-    .map((pin, i) => ({
-      pin,
-      // preferred topic scores 3×, recency gives a small tiebreak
-      score: (topicSet.has(pin.topic ?? "") ? 3 : 1) + Math.max(0, 1 - i * 0.02),
-    }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 4)
-    .map((x) => x.pin);
-}
-
-// Build a subject line that reflects the user's top topics if present in the digest
-function buildSubject(pins: DigestPin[], userTopics: string[]): string {
-  if (userTopics.length === 0) return "Your world this morning";
-  const topicSet = new Set(userTopics);
-  const matchedTopics = [...new Set(
-    pins.map((p) => p.topic ?? "other").filter((t) => topicSet.has(t))
-  )];
-  if (matchedTopics.length === 0) return "Your world this morning";
-  if (matchedTopics.length === 1) {
-    return `Your ${TOPIC_LABELS_EMAIL[matchedTopics[0]] ?? matchedTopics[0]} briefing this morning`;
-  }
-  const [a, b] = matchedTopics;
-  return `Your ${TOPIC_LABELS_EMAIL[a] ?? a} & ${TOPIC_LABELS_EMAIL[b] ?? b} briefing`;
-}
 
 function isAuthorized(request: NextRequest): boolean {
   const auth = request.headers.get("authorization");
@@ -164,7 +130,7 @@ async function handle(request: NextRequest): Promise<NextResponse> {
       const subject = buildSubject(digestPins, userTopics);
 
       const { error: sendError } = await resend.emails.send({
-        from: "Briefed <onboarding@resend.dev>",
+        from: "Briefed <digest@stay-briefed.com>",
         to: email,
         subject,
         html,
@@ -183,6 +149,14 @@ async function handle(request: NextRequest): Promise<NextResponse> {
   }
 
   console.log(`[send-digest] Sent: ${sent}, Failed: ${failures.length}`);
+
+  if (failures.length > 0) {
+    await sendAlertEmail(
+      `Digest send failures (${failures.length})`,
+      `${failures.length} of ${sent + failures.length} digest emails failed to send.\n\nFailed addresses:\n${failures.join("\n")}`
+    );
+  }
+
   return NextResponse.json({ sent, failures });
 }
 
