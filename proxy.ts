@@ -46,7 +46,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Unauthenticated users can only access public pages
-  if (!user && !isPublic && !isOnboarding) {
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
     return NextResponse.redirect(url);

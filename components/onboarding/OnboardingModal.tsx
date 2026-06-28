@@ -16,6 +16,7 @@ export default function OnboardingModal({ userId, onComplete }: OnboardingModalP
   const [step, setStep] = useState<1 | 2>(1);
   const [selected, setSelected] = useState<Set<PinTopic>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function toggle(topic: PinTopic) {
     setSelected((prev) => {
@@ -27,15 +28,23 @@ export default function OnboardingModal({ userId, onComplete }: OnboardingModalP
 
   async function handleContinue() {
     setSaving(true);
+    setSaveError(null);
     const topics = selected.size > 0 ? [...selected] : SELECTABLE_TOPICS;
-    await savePreferences(userId, topics).catch(console.error);
-    setSaving(false);
-    setStep(2);
+    try {
+      await savePreferences(userId, topics);
+      setStep(2);
+    } catch (err) {
+      console.error("[OnboardingModal] Failed to save preferences:", err);
+      setSaveError("Couldn't save your topics. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleDone() {
     const topics = selected.size > 0 ? [...selected] : SELECTABLE_TOPICS;
-    localStorage.setItem("briefed-onboarded", "1");
+    // Set cookie so middleware can detect onboarding completion on the server side
+    document.cookie = "briefed_onboarded=1; path=/; max-age=31536000; SameSite=Lax";
     onComplete(topics);
   }
 
@@ -84,6 +93,8 @@ export default function OnboardingModal({ userId, onComplete }: OnboardingModalP
                 );
               })}
             </div>
+
+            {saveError && <p className="text-red-400 text-xs text-center">{saveError}</p>}
 
             <button
               onClick={handleContinue}
