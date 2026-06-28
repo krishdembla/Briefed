@@ -1,17 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/db/supabase-browser";
 
 type Mode = "signin" | "signup" | "forgot";
 
+const CALLBACK_ERRORS: Record<string, string> = {
+  recovery_failed: "This confirmation link has expired or is invalid. Please request a new one.",
+};
+
 export default function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackError = searchParams.get("error");
+
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    callbackError ? (CALLBACK_ERRORS[callbackError] ?? "Something went wrong. Please try again.") : null
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,7 +41,10 @@ export default function AuthPage() {
     if (mode === "signin") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        setError(error.message);
+        const msg = error.message.toLowerCase().includes("email not confirmed")
+          ? "Please confirm your email first — check your inbox for the confirmation link."
+          : error.message;
+        setError(msg);
       } else {
         router.push("/map");
         router.refresh();
@@ -42,8 +54,9 @@ export default function AuthPage() {
       if (error) {
         setError(error.message);
       } else {
-        setMessage("Check your email to confirm your account. Once confirmed, sign in and we'll set up your digest.");
-        switchMode("signin");
+        // Stay in signup mode so the confirmation message stays visible;
+        // the user can switch to sign-in manually once they've confirmed.
+        setMessage("Check your email and click the confirmation link. Once confirmed, sign in below.");
       }
     } else {
       // forgot password — route through the server-side callback so PKCE exchange

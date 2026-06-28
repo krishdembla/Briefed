@@ -131,20 +131,30 @@ export default function ProfilePage() {
     if (!userId) return;
     setDigestFrequency(freq);
     setSavingFrequency(true);
-    await saveDigestFrequency(userId, freq).catch(console.error);
-    setSavingFrequency(false);
-    setFrequencySaved(true);
-    setTimeout(() => setFrequencySaved(false), 2000);
+    try {
+      await saveDigestFrequency(userId, freq);
+      setFrequencySaved(true);
+      setTimeout(() => setFrequencySaved(false), 2000);
+    } catch (err) {
+      console.error("[Profile] Failed to save digest frequency:", err);
+    } finally {
+      setSavingFrequency(false);
+    }
   }
 
   async function handleSaveTopics() {
     if (!userId) return;
     setSavingTopics(true);
     const topics = selectedTopics.size > 0 ? [...selectedTopics] : SELECTABLE_TOPICS;
-    await savePreferences(userId, topics).catch(console.error);
-    setSavingTopics(false);
-    setTopicsSaved(true);
-    setTimeout(() => setTopicsSaved(false), 2000);
+    try {
+      await savePreferences(userId, topics);
+      setTopicsSaved(true);
+      setTimeout(() => setTopicsSaved(false), 2000);
+    } catch (err) {
+      console.error("[Profile] Failed to save topics:", err);
+    } finally {
+      setSavingTopics(false);
+    }
   }
 
   const stats = computeStats(checkins);

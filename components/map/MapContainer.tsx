@@ -19,12 +19,13 @@ import type { PinTopic } from "@/types/pipeline";
 // Dynamic import avoids SSR entirely for the Mapbox component
 const BriefedMap = dynamic(() => import("./BriefedMap"), { ssr: false });
 
-const TODAY = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-const STORAGE_KEY = `briefed-checkin-${TODAY}`;
+function getTodayKey() {
+  return `briefed-checkin-${new Date().toISOString().slice(0, 10)}`;
+}
 
 function loadReadPins(): Set<string> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getTodayKey());
     return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
   } catch {
     return new Set();
@@ -33,7 +34,7 @@ function loadReadPins(): Set<string> {
 
 function saveReadPins(ids: Set<string>) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
+    localStorage.setItem(getTodayKey(), JSON.stringify([...ids]));
   } catch {
     // localStorage unavailable — silently continue
   }
@@ -61,6 +62,7 @@ export default function MapContainer() {
   const [trendingPins, setTrendingPins] = useState<MapPin[]>([]);
   const trendingFetchedRef = useRef(false);
   const checkinRecordedRef = useRef(false);
+  const [checkinFailed, setCheckinFailed] = useState(false);
   const flyToRef = useRef<((lng: number, lat: number) => void) | null>(null);
 
   // Fetch pins
@@ -120,7 +122,7 @@ export default function MapContainer() {
         if (finalTopics.length > 0) {
           setUserTopics(finalTopics);
           setActiveTopic("foryou");
-        } else if (!localStorage.getItem("briefed-onboarded")) {
+        } else {
           setShowOnboarding(true);
         }
         if (savedIds.length > 0) {
@@ -133,11 +135,17 @@ export default function MapContainer() {
   // Check-in on 3 reads
   useEffect(() => {
     if (readPins.size >= 3 && userId && !checkinRecordedRef.current) {
-      checkinRecordedRef.current = true;
       recordCheckin(userId, readPins.size)
-        .then(() => fetchStreak(userId))
+        .then(() => {
+          checkinRecordedRef.current = true;
+          setCheckinFailed(false);
+          return fetchStreak(userId);
+        })
         .then(setStreak)
-        .catch(console.error);
+        .catch((err) => {
+          console.error("[MapContainer] Check-in failed:", err);
+          setCheckinFailed(true);
+        });
     }
   }, [readPins, userId]);
 
@@ -359,7 +367,7 @@ export default function MapContainer() {
                   handleMapPinClick(pin);
                 }}
               />
-              {!expandedPin && <CheckInStrip readCount={readPins.size} streak={streak} />}
+              {!expandedPin && <CheckInStrip readCount={readPins.size} streak={streak} checkinFailed={checkinFailed} />}
             </div>
           )}
         </div>
@@ -419,7 +427,7 @@ export default function MapContainer() {
         />
 
         {/* Streak strip overlay on map */}
-        {!expandedPin && <CheckInStrip readCount={readPins.size} streak={streak} />}
+        {!expandedPin && <CheckInStrip readCount={readPins.size} streak={streak} checkinFailed={checkinFailed} />}
       </div>
 
     </div>
