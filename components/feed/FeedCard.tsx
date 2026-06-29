@@ -85,6 +85,7 @@ export default function FeedCard({ pin, isRead, isActive, onActivate, onOpen, sc
       {/* Direction A: OG image header (16:9 aspect ratio) */}
       <div className="w-full aspect-video overflow-hidden">
         {showImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={pin.og_image_url!}
             alt=""

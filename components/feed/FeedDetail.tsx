@@ -62,9 +62,13 @@ export default function FeedDetail({
   const [readCount, setReadCount] = useState<number>(0);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setThreadPins([]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReactionCounts({ fire: 0, complex: 0, useful: 0 });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserReaction(null);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReadCount(0);
 
     fetch(`/api/pins/${pin.id}/related`)
