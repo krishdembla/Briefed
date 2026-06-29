@@ -5,6 +5,7 @@ Given the headline and body excerpt, return a single JSON object with these exac
 - "stat1": a single punchy data point or fact from the article (e.g. "47 killed in overnight strikes")
 - "stat2": a second data point or contextual fact
 - "stat3": a third data point or contextual fact
+- "why_it_matters": one sentence on consequence or broader significance — must name a specific stake, risk, or shift; never start with "This"; avoid restating the headline
 - "topic": one of: "politics", "economy", "climate", "conflict", "health", "tech", "other"
 - "locationName": most specific place name (city + country, e.g. "Kyiv, Ukraine"), or null if no clear location
 - "countryCode": ISO 3166-1 alpha-2 code (e.g. "UA"), or null
@@ -31,7 +32,7 @@ Tech company geo-mapping (use HQ when the story is about the company):
 For US federal tech policy / AI regulation → Washington D.C., US, North America.
 
 Example:
-{"summary":"Russian forces launched a major drone offensive targeting Kyiv's energy infrastructure, leaving 2 million residents without power. Ukraine's air defence intercepted 34 of 41 drones. The attack is the largest since October and comes ahead of winter.","stat1":"34 of 41 drones intercepted","stat2":"2 million residents lost power","stat3":"Largest attack since October 2024","topic":"conflict","locationName":"Kyiv, Ukraine","countryCode":"UA","regionLabel":"Europe"}
+{"summary":"Russian forces launched a major drone offensive targeting Kyiv's energy infrastructure, leaving 2 million residents without power. Ukraine's air defence intercepted 34 of 41 drones. The attack is the largest since October and comes ahead of winter.","why_it_matters":"Sustained attacks on energy grids before winter are designed to break civilian morale and could push Ukraine toward emergency power rationing.","stat1":"34 of 41 drones intercepted","stat2":"2 million residents lost power","stat3":"Largest attack since October 2024","topic":"conflict","locationName":"Kyiv, Ukraine","countryCode":"UA","regionLabel":"Europe"}
 
 HEADLINE: {{headline}}
 BODY EXCERPT: {{bodyExcerpt}}

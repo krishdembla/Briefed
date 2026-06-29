@@ -5,6 +5,7 @@ export interface RawArticle {
   headline: string;
   body: string; // full text or best available excerpt
   publishedAt: string; // ISO 8601
+  ogImageUrl?: string; // source-provided image (urlToImage / RSS enclosure)
 }
 
 // AI-extracted location before geocoding
@@ -21,6 +22,7 @@ export interface AISummary {
   stat2: string;
   stat3: string;
   topic: PinTopic;
+  why_it_matters: string;
 }
 
 export type PinTopic =
@@ -43,6 +45,8 @@ export interface Pin {
   stat_1: string | null;
   stat_2: string | null;
   stat_3: string | null;
+  why_it_matters: string | null;
+  og_image_url: string | null;
   lat: number | null;
   lng: number | null;
   country_code: string | null;

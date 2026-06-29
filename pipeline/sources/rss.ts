@@ -89,12 +89,19 @@ export async function fetchFromRss(): Promise<RawArticle[]> {
     for (const item of parsed.items) {
       if (!item.link || !item.title) continue;
 
+      // Extract image from enclosure (e.g. <enclosure type="image/jpeg" url="..."/>)
+      const enclosure = item.enclosure as { url?: string; type?: string } | undefined;
+      const ogImageUrl = enclosure?.type?.startsWith("image/") && enclosure.url
+        ? enclosure.url
+        : undefined;
+
       articles.push({
         sourceUrl: item.link,
         sourceName: feed.sourceName,
         headline: item.title,
         body: item.contentSnippet ?? item.content ?? item.summary ?? "",
         publishedAt: item.isoDate ?? item.pubDate ?? new Date().toISOString(),
+        ogImageUrl,
       });
     }
   }

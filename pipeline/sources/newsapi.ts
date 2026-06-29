@@ -32,6 +32,7 @@ interface NewsApiArticle {
   description: string | null;
   content: string | null;
   publishedAt: string;
+  urlToImage: string | null;
 }
 
 interface NewsApiResponse {
@@ -151,5 +152,6 @@ export async function fetchFromNewsApi(): Promise<RawArticle[]> {
       headline: a.title,
       body: [a.description, a.content].filter(Boolean).join("\n\n"),
       publishedAt: a.publishedAt,
+      ogImageUrl: a.urlToImage ?? undefined,
     }));
 }

@@ -55,7 +55,7 @@ export async function processArticle(
     console.error(`[processArticle] LLM call failed for "${headline.slice(0, 60)}":`, err);
     // Graceful fallback — pin is still stored, just without AI enrichment
     return {
-      summary: { summary: headline, stat1: "", stat2: "", stat3: "", topic: "other" },
+      summary: { summary: headline, stat1: "", stat2: "", stat3: "", why_it_matters: "", topic: "other" },
       location: null,
     };
   }
@@ -70,6 +70,7 @@ export async function processArticle(
     stat1: (parsed.stat1 as string) || "",
     stat2: (parsed.stat2 as string) || "",
     stat3: (parsed.stat3 as string) || "",
+    why_it_matters: (parsed.why_it_matters as string) || "",
     topic,
   };
 

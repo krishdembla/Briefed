@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TOPIC_COLORS, TOPIC_LABELS, type MapPin } from "@/types/map";
 
 interface FeedCardProps {
@@ -20,14 +20,33 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+// Topic-coloured gradient used as fallback when og_image_url is absent or fails to load
+function TopicGradient({ color }: { color: string }) {
+  return (
+    <div
+      className="w-full h-full"
+      style={{
+        background: `linear-gradient(135deg, ${color}22 0%, ${color}0a 100%)`,
+        borderBottom: `1px solid ${color}20`,
+      }}
+    />
+  );
+}
+
 export default function FeedCard({ pin, isRead, isActive, onActivate, onOpen, scrollRoot }: FeedCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const topicColor = TOPIC_COLORS[pin.topic ?? "other"];
   const topicLabel = TOPIC_LABELS[pin.topic ?? "other"];
+  const stats = [pin.stat_1, pin.stat_2, pin.stat_3].filter(Boolean) as string[];
+
+  // Direction C: Progressive reveal — collapsed by default, expands on click
+  const [expanded, setExpanded] = useState(false);
+
+  // Direction A: track OG image load failure so we can swap in the gradient
+  const [imageError, setImageError] = useState(false);
 
   // Fire onActivate when this card scrolls into the centered viewport band.
-  // rootMargin shrinks the observer window to the middle ~30% of the panel,
-  // so only the card the user is actually reading triggers the map fly-to.
+  // Targets the card root div so collapse/expand never affects this behaviour.
   useEffect(() => {
     if (!ref.current || !scrollRoot) return;
     const el = ref.current;
@@ -43,70 +62,123 @@ export default function FeedCard({ pin, isRead, isActive, onActivate, onOpen, sc
     return () => observer.disconnect();
   }, [pin.id, onActivate, scrollRoot]);
 
-  const stats = [pin.stat_1, pin.stat_2, pin.stat_3].filter(Boolean) as string[];
+  const showImage = !!(pin.og_image_url && !imageError);
 
   return (
     <div
       ref={ref}
       data-pin-id={pin.id}
-      onClick={() => onOpen(pin)}
-      className={`group cursor-pointer rounded-2xl p-5 transition-all duration-300 border ${
+      onClick={() => {
+        if (!expanded) {
+          setExpanded(true);
+        } else {
+          onOpen(pin);
+        }
+      }}
+      className={`group cursor-pointer rounded-2xl overflow-hidden transition-all duration-300 border ${
         isActive
           ? "bg-white shadow-xl shadow-indigo-100/60 border-indigo-200 scale-[1.01]"
           : "bg-white/70 hover:bg-white border-zinc-200/70 hover:border-zinc-300 hover:shadow-md"
       } ${isRead ? "opacity-60" : ""}`}
       style={isActive ? { borderLeftColor: topicColor, borderLeftWidth: "4px" } : undefined}
     >
-      {/* Top row: topic chip + meta */}
-      <div className="flex items-center justify-between gap-2 mb-2.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <span
-            className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0"
-            style={{ backgroundColor: topicColor + "1f", color: topicColor }}
-          >
-            {topicLabel}
-          </span>
-          {pin.region_label && (
-            <span className="text-[11px] text-zinc-500 truncate">{pin.region_label}</span>
-          )}
-        </div>
-        <span className="text-[11px] text-zinc-400 shrink-0">{timeAgo(pin.published_at)}</span>
+      {/* Direction A: OG image header (16:9 aspect ratio) */}
+      <div className="w-full aspect-video overflow-hidden">
+        {showImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={pin.og_image_url!}
+            alt=""
+            className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
+            loading="lazy"
+          />
+        ) : (
+          <TopicGradient color={topicColor} />
+        )}
       </div>
 
-      {/* Headline */}
-      <h3 className="text-zinc-900 font-semibold text-[15px] leading-snug mb-2 line-clamp-3">
-        {pin.headline}
-      </h3>
-
-      {/* Summary */}
-      {pin.summary && (
-        <p className="text-zinc-600 text-sm leading-relaxed line-clamp-3 mb-3">
-          {pin.summary}
-        </p>
-      )}
-
-      {/* Stats chips */}
-      {stats.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {stats.slice(0, 2).map((stat, i) => (
+      <div className="p-4">
+        {/* Top row: topic chip + region + timestamp */}
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2 min-w-0">
             <span
-              key={i}
-              className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200"
+              className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0"
+              style={{ backgroundColor: topicColor + "1f", color: topicColor }}
             >
-              {stat}
+              {topicLabel}
             </span>
-          ))}
+            {pin.region_label && (
+              <span className="text-[11px] text-zinc-500 truncate">{pin.region_label}</span>
+            )}
+          </div>
+          <span className="text-[11px] text-zinc-400 shrink-0">{timeAgo(pin.published_at)}</span>
         </div>
-      )}
 
-      {/* Footer */}
-      <div className="flex items-center justify-between text-[11px] pt-1">
-        <span className="text-zinc-400 truncate">{pin.source_name}</span>
-        <span className={`font-semibold transition-colors ${
-          isActive ? "text-indigo-600" : "text-zinc-400 group-hover:text-indigo-600"
-        }`}>
-          Read →
-        </span>
+        {/* Headline — always visible */}
+        <h3 className="text-zinc-900 font-semibold text-[15px] leading-snug mb-2 line-clamp-3">
+          {pin.headline}
+        </h3>
+
+        {/* Direction C: Expandable section */}
+        {!expanded ? (
+          /* Collapsed state: teaser prompt */
+          <p className="text-[11px] text-zinc-400 group-hover:text-indigo-500 transition-colors">
+            Tap to read more →
+          </p>
+        ) : (
+          /* Expanded state: summary + why it matters + stats */
+          <div onClick={(e) => e.stopPropagation()}>
+            {pin.summary && (
+              <p className="text-zinc-600 text-sm leading-relaxed line-clamp-4 mb-3">
+                {pin.summary}
+              </p>
+            )}
+
+            {/* Direction B: "Why it matters" callout */}
+            {pin.why_it_matters && (
+              <div
+                className="rounded-xl px-3 py-2.5 mb-3 text-sm leading-snug"
+                style={{ backgroundColor: topicColor + "12", borderLeft: `3px solid ${topicColor}` }}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider block mb-1" style={{ color: topicColor }}>
+                  Why it matters
+                </span>
+                <p className="text-zinc-700">{pin.why_it_matters}</p>
+              </div>
+            )}
+
+            {/* Stats chips */}
+            {stats.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {stats.slice(0, 2).map((stat, i) => (
+                  <span
+                    key={i}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200"
+                  >
+                    {stat}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Tap to open full detail */}
+            <button
+              onClick={() => onOpen(pin)}
+              className="w-full text-center text-xs font-semibold text-indigo-600 hover:text-indigo-700 py-1"
+            >
+              Open full story →
+            </button>
+          </div>
+        )}
+
+        {/* Footer: source + read indicator */}
+        <div className="flex items-center justify-between text-[11px] pt-2 mt-1 border-t border-zinc-100">
+          <span className="text-zinc-400 truncate">{pin.source_name}</span>
+          {isRead && (
+            <span className="text-emerald-500 font-semibold">Read ✓</span>
+          )}
+        </div>
       </div>
     </div>
   );
