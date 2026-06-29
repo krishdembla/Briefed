@@ -33,6 +33,18 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+interface ReactionCounts {
+  fire: number;
+  complex: number;
+  useful: number;
+}
+
+const REACTION_META: { key: keyof ReactionCounts; emoji: string; label: string }[] = [
+  { key: "fire",    emoji: "🔥", label: "Big story" },
+  { key: "complex", emoji: "🤔", label: "Complex"   },
+  { key: "useful",  emoji: "💡", label: "Useful"    },
+];
+
 export default function FeedDetail({
   pin, isRead, isSaved, userId, relatedPins,
   onBack, onRead, onSaveToggle, onSelectRelated,
@@ -44,14 +56,69 @@ export default function FeedDetail({
   const [threadPins, setThreadPins] = useState<MapPin[]>([]);
   const [copied, setCopied] = useState(false);
 
+  // Direction D: reactions + read count
+  const [reactionCounts, setReactionCounts] = useState<ReactionCounts>({ fire: 0, complex: 0, useful: 0 });
+  const [userReaction, setUserReaction] = useState<string | null>(null);
+  const [readCount, setReadCount] = useState<number>(0);
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setThreadPins([]);
+    setReactionCounts({ fire: 0, complex: 0, useful: 0 });
+    setUserReaction(null);
+    setReadCount(0);
+
     fetch(`/api/pins/${pin.id}/related`)
       .then((r) => (r.ok ? r.json() : []))
       .then(setThreadPins)
-      .catch(() => []);
+      .catch(() => {});
+
+    fetch(`/api/pins/${pin.id}/reactions`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setReactionCounts(data.counts ?? { fire: 0, complex: 0, useful: 0 });
+        setUserReaction(data.userReaction ?? null);
+        setReadCount(data.readCount ?? 0);
+      })
+      .catch(() => {});
   }, [pin.id]);
+
+  async function handleReaction(reaction: string) {
+    if (!userId) return;
+    const optimisticPrev = userReaction;
+    const isToggleOff = userReaction === reaction;
+
+    // Optimistic update
+    setUserReaction(isToggleOff ? null : reaction);
+    setReactionCounts((prev) => {
+      const next = { ...prev };
+      if (optimisticPrev && optimisticPrev in next) {
+        next[optimisticPrev as keyof ReactionCounts] = Math.max(0, next[optimisticPrev as keyof ReactionCounts] - 1);
+      }
+      if (!isToggleOff) {
+        next[reaction as keyof ReactionCounts]++;
+      }
+      return next;
+    });
+
+    try {
+      const res = await fetch(`/api/pins/${pin.id}/reactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reaction }),
+      });
+      if (!res.ok) throw new Error("Failed");
+    } catch {
+      // Roll back on failure
+      setUserReaction(optimisticPrev);
+      setReactionCounts((prev) => {
+        const next = { ...prev };
+        if (optimisticPrev && optimisticPrev in next) next[optimisticPrev as keyof ReactionCounts]++;
+        if (!isToggleOff) next[reaction as keyof ReactionCounts] = Math.max(0, next[reaction as keyof ReactionCounts] - 1);
+        return next;
+      });
+    }
+  }
 
   const touchStartX = useRef(0);
 
@@ -97,11 +164,27 @@ export default function FeedDetail({
         </h2>
 
         {pin.summary && (
-          <p className="text-zinc-600 text-sm leading-relaxed mb-5">{pin.summary}</p>
+          <p className="text-zinc-600 text-sm leading-relaxed mb-4">{pin.summary}</p>
+        )}
+
+        {/* Direction B: Why it matters callout */}
+        {pin.why_it_matters && (
+          <div
+            className="rounded-xl px-3.5 py-3 mb-4 text-sm leading-snug"
+            style={{ backgroundColor: topicColor + "12", borderLeft: `3px solid ${topicColor}` }}
+          >
+            <span
+              className="text-[10px] font-bold uppercase tracking-wider block mb-1"
+              style={{ color: topicColor }}
+            >
+              Why it matters
+            </span>
+            <p className="text-zinc-700">{pin.why_it_matters}</p>
+          </div>
         )}
 
         {stats.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-5">
+          <div className="flex flex-wrap gap-2 mb-4">
             {stats.map((stat, i) => (
               <span
                 key={i}
@@ -112,6 +195,35 @@ export default function FeedDetail({
             ))}
           </div>
         )}
+
+        {/* Direction D: Reactions + read count */}
+        <div className="flex items-center gap-2 mb-4">
+          {REACTION_META.map(({ key, emoji, label }) => {
+            const count = reactionCounts[key];
+            const isActive = userReaction === key;
+            return (
+              <button
+                key={key}
+                onClick={() => handleReaction(key)}
+                title={label}
+                disabled={!userId}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                  isActive
+                    ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                    : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 disabled:cursor-default"
+                }`}
+              >
+                <span>{emoji}</span>
+                {count > 0 && <span>{count}</span>}
+              </button>
+            );
+          })}
+          {readCount > 1 && (
+            <span className="ml-auto text-[11px] text-zinc-400">
+              {readCount.toLocaleString()} readers
+            </span>
+          )}
+        </div>
 
         <div className="flex items-center justify-between gap-3 py-4 border-t border-zinc-100">
           <a

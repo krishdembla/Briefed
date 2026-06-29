@@ -200,6 +200,8 @@ async function processArticle(article: RawArticle, runId: string): Promise<Pin> 
     stat_1: summary.stat1 || null,
     stat_2: summary.stat2 || null,
     stat_3: summary.stat3 || null,
+    why_it_matters: summary.why_it_matters || null,
+    og_image_url: article.ogImageUrl ?? null,
     lat: location?.lat ?? null,
     lng: location?.lng ?? null,
     country_code: location?.countryCode || null,

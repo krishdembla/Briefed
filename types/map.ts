@@ -8,6 +8,8 @@ export interface MapPin {
   stat_1: string | null;
   stat_2: string | null;
   stat_3: string | null;
+  why_it_matters: string | null;
+  og_image_url: string | null;
   topic: PinTopic | null;
   source_name: string;
   source_url: string;
