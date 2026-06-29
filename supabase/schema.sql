@@ -63,7 +63,7 @@ ALTER TABLE pins ENABLE ROW LEVEL SECURITY;
 
 -- Authenticated users can read pins (via /api/pins which uses service role,
 -- but this policy allows direct client reads if ever needed)
-CREATE POLICY IF NOT EXISTS "Authenticated users can read pins"
+CREATE POLICY "Authenticated users can read pins"
   ON pins FOR SELECT
   TO authenticated
   USING (true);
