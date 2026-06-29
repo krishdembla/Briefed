@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/db/supabase-browser";
 import { savePreferences } from "@/lib/db/preferences";
@@ -31,6 +31,14 @@ export default function OnboardingPage() {
   const [selected, setSelected] = useState<Set<PinTopic>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUserId(data.user.id);
+    });
+  }, []);
 
   function toggle(topic: PinTopic) {
     setSelected((prev) => {
@@ -46,17 +54,16 @@ export default function OnboardingPage() {
   }
 
   async function handleSave() {
+    if (!userId) {
+      setError("Session not ready — please wait a moment and try again.");
+      return;
+    }
     setSaving(true);
     setError(null);
 
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) throw new Error("Not authenticated");
-
-      // Save whatever they picked — if nothing selected, save all topics
       const topics = selected.size > 0 ? [...selected] : SELECTABLE_TOPICS;
-      await savePreferences(data.user.id, topics);
+      await savePreferences(userId, topics);
       markOnboarded();
       router.push("/map");
       router.refresh();
