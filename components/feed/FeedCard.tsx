@@ -20,19 +20,6 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-// Topic-coloured gradient used as fallback when og_image_url is absent or fails to load
-function TopicGradient({ color }: { color: string }) {
-  return (
-    <div
-      className="w-full h-full"
-      style={{
-        background: `linear-gradient(135deg, ${color}22 0%, ${color}0a 100%)`,
-        borderBottom: `1px solid ${color}20`,
-      }}
-    />
-  );
-}
-
 export default function FeedCard({ pin, isRead, isActive, onActivate, onOpen, scrollRoot }: FeedCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const topicColor = TOPIC_COLORS[pin.topic ?? "other"];
@@ -42,8 +29,10 @@ export default function FeedCard({ pin, isRead, isActive, onActivate, onOpen, sc
   // Direction C: Progressive reveal — collapsed by default, expands on click
   const [expanded, setExpanded] = useState(false);
 
-  // Direction A: track OG image load failure so we can swap in the gradient
+  // Direction A: track image load state — collapse the slot entirely on
+  // failure rather than showing a placeholder, and fade the image in on load
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // Fire onActivate when this card scrolls into the centered viewport band.
   // Targets the card root div so collapse/expand never affects this behaviour.
@@ -82,21 +71,27 @@ export default function FeedCard({ pin, isRead, isActive, onActivate, onOpen, sc
       } ${isRead ? "opacity-60" : ""}`}
       style={isActive ? { borderLeftColor: topicColor, borderLeftWidth: "4px" } : undefined}
     >
-      {/* Direction A: OG image header (16:9 aspect ratio) */}
-      <div className="w-full aspect-video overflow-hidden">
-        {showImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
+      {/* Direction A: OG image header (16:9). No slot is rendered at all when
+          there's no image — articles without one go straight to the text
+          content instead of showing an empty placeholder block. */}
+      {showImage && (
+        <div
+          className="w-full aspect-video overflow-hidden"
+          style={{ backgroundColor: topicColor + "14" }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={pin.og_image_url!}
             alt=""
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover transition-opacity duration-300 ${
+              imageLoaded ? "opacity-100" : "opacity-0"
+            }`}
+            onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
             loading="lazy"
           />
-        ) : (
-          <TopicGradient color={topicColor} />
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="p-4">
         {/* Top row: topic chip + region + timestamp */}

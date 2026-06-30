@@ -1,7 +1,54 @@
 import Parser from "rss-parser";
 import type { RawArticle } from "@/types/pipeline";
 
-const parser = new Parser({ timeout: 10_000 });
+type MediaThumbnail = { $?: { url?: string } };
+type MediaContent = { $?: { url?: string; medium?: string; type?: string } };
+
+interface RssItemExtensions {
+  mediaThumbnail?: MediaThumbnail | MediaThumbnail[];
+  mediaContent?: MediaContent | MediaContent[];
+}
+
+const parser: Parser<unknown, RssItemExtensions> = new Parser({
+  timeout: 10_000,
+  customFields: {
+    item: [
+      ["media:thumbnail", "mediaThumbnail"],
+      ["media:content", "mediaContent"],
+    ],
+  },
+});
+
+const IMAGE_EXTENSION_RE = /\.(jpe?g|png|webp|gif)(\?|$)/i;
+
+// Most feeds publish images via the Media RSS namespace (media:thumbnail or
+// media:content) rather than the plain RSS <enclosure> tag. We check both,
+// preferring the dedicated thumbnail field, and fall back to enclosure for
+// the few feeds that still use it.
+function extractImageUrl(
+  item: Parser.Item & RssItemExtensions
+): string | undefined {
+  const thumb = Array.isArray(item.mediaThumbnail) ? item.mediaThumbnail[0] : item.mediaThumbnail;
+  if (thumb?.$?.url) return thumb.$.url;
+
+  const contentList = Array.isArray(item.mediaContent) ? item.mediaContent : item.mediaContent ? [item.mediaContent] : [];
+  for (const content of contentList) {
+    const url = content?.$?.url;
+    if (!url) continue;
+    const medium = content.$?.medium;
+    const type = content.$?.type;
+    if (medium === "image" || type?.startsWith("image/") || IMAGE_EXTENSION_RE.test(url)) {
+      return url;
+    }
+  }
+
+  const enclosure = item.enclosure as { url?: string; type?: string } | undefined;
+  if (enclosure?.type?.startsWith("image/") && enclosure.url) {
+    return enclosure.url;
+  }
+
+  return undefined;
+}
 
 // RSS feeds split by purpose:
 // - General/world news: broad coverage, geographically diverse
@@ -89,11 +136,7 @@ export async function fetchFromRss(): Promise<RawArticle[]> {
     for (const item of parsed.items) {
       if (!item.link || !item.title) continue;
 
-      // Extract image from enclosure (e.g. <enclosure type="image/jpeg" url="..."/>)
-      const enclosure = item.enclosure as { url?: string; type?: string } | undefined;
-      const ogImageUrl = enclosure?.type?.startsWith("image/") && enclosure.url
-        ? enclosure.url
-        : undefined;
+      const ogImageUrl = extractImageUrl(item);
 
       articles.push({
         sourceUrl: item.link,
