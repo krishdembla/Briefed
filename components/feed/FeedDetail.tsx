@@ -18,8 +18,12 @@ interface FeedDetailProps {
 
 const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
 
+function pinUrl(pinId: string): string {
+  return `${APP_URL}/pin/${pinId}`;
+}
+
 function copyPinUrl(pinId: string): void {
-  const url = `${APP_URL}/pin/${pinId}`;
+  const url = pinUrl(pinId);
   if (navigator.clipboard) {
     navigator.clipboard.writeText(url).catch(() => {});
   }
@@ -55,6 +59,7 @@ export default function FeedDetail({
   const [showPicker, setShowPicker] = useState(false);
   const [threadPins, setThreadPins] = useState<MapPin[]>([]);
   const [copied, setCopied] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
 
   // Direction D: reactions + read count
   const [reactionCounts, setReactionCounts] = useState<ReactionCounts>({ fire: 0, complex: 0, useful: 0 });
@@ -122,6 +127,22 @@ export default function FeedDetail({
         return next;
       });
     }
+  }
+
+  // Direction: native OS share sheet on mobile (covers WhatsApp, Instagram, iMessage,
+  // etc. for free); explicit WhatsApp/Telegram/Copy dropdown on desktop where
+  // navigator.share isn't supported.
+  async function handleShare() {
+    const url = pinUrl(pin.id);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: pin.headline, url });
+      } catch {
+        // User cancelled the native sheet — no-op
+      }
+      return;
+    }
+    setShowShareMenu((prev) => !prev);
   }
 
   const touchStartX = useRef(0);
@@ -238,27 +259,55 @@ export default function FeedDetail({
           >
             {pin.source_name}
           </a>
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Share button — copies /pin/:id URL to clipboard */}
+          <div className="flex items-center gap-2 shrink-0 relative">
+            {/* Share button — native OS sheet on mobile, dropdown fallback on desktop */}
             <button
-              onClick={() => {
-                copyPinUrl(pin.id);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-              title="Copy link"
+              onClick={handleShare}
+              title="Share"
               className="w-8 h-8 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all"
             >
-              {copied ? (
-                <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                </svg>
-              )}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
             </button>
+
+            {/* Desktop fallback dropdown */}
+            {showShareMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)} />
+                <div className="absolute right-0 top-full mt-2 z-20 bg-white border border-zinc-200 rounded-xl shadow-lg py-1.5 w-44">
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(`${pin.headline} ${pinUrl(pin.id)}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowShareMenu(false)}
+                    className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                  >
+                    WhatsApp
+                  </a>
+                  <a
+                    href={`https://t.me/share/url?url=${encodeURIComponent(pinUrl(pin.id))}&text=${encodeURIComponent(pin.headline)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowShareMenu(false)}
+                    className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                  >
+                    Telegram
+                  </a>
+                  <button
+                    onClick={() => {
+                      copyPinUrl(pin.id);
+                      setCopied(true);
+                      setShowShareMenu(false);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="w-full text-left flex items-center gap-2.5 px-3.5 py-2 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                  >
+                    {copied ? "Copied!" : "Copy link"}
+                  </button>
+                </div>
+              </>
+            )}
 
             {/* Save button — only shown when user is signed in */}
             {userId && (
