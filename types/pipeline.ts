@@ -23,6 +23,7 @@ export interface AISummary {
   stat3: string;
   topic: PinTopic;
   why_it_matters: string;
+  tags: string[];
 }
 
 export type PinTopic =
@@ -32,6 +33,7 @@ export type PinTopic =
   | "conflict"
   | "health"
   | "tech"
+  | "sports"
   | "other";
 
 // A fully processed pin ready for Supabase insertion
@@ -52,6 +54,7 @@ export interface Pin {
   country_code: string | null;
   region_label: string | null;
   topic: PinTopic | null;
+  tags: string[] | null;
   pipeline_run_id: string;
   ai_processed: boolean;
   geo_processed: boolean;

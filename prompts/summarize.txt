@@ -5,7 +5,8 @@ Given the headline and body excerpt, return a JSON object with these exact field
 - "stat1": a single punchy data point or fact from the article (e.g. "47 killed in overnight strikes")
 - "stat2": a second data point or contextual fact (e.g. "$2.3B in humanitarian aid pledged")
 - "stat3": a third data point or piece of context (e.g. "Third ceasefire attempt in 6 months")
-- "topic": one of: "politics", "economy", "climate", "conflict", "health", "tech", "other"
+- "topic": one of: "politics", "economy", "climate", "conflict", "health", "tech", "sports", "other"
+- "tags": an array of 2–5 specific, fine-grained labels that describe the story precisely. Use proper nouns and named entities where applicable. Examples: ["FIFA World Cup 2026", "Brazil"], ["Federal Reserve", "Interest Rates", "Recession Risk"], ["Premier League", "Transfer Window"], ["IPO", "SoftBank", "Tokyo Stock Exchange"], ["Agentic AI", "OpenAI", "Foundation Models"], ["Natural Disaster", "Philippines", "Typhoon"], ["Y Combinator", "Seed Round"]. Do NOT repeat the broad topic (e.g. do not tag "sports" if topic is already "sports"). Keep tags short (1–4 words each) and specific enough to distinguish this story from other stories in the same topic.
 
 Rules:
 - Stats should be specific and concrete — avoid vague statements like "many people affected"
@@ -14,7 +15,7 @@ Rules:
 - Return only valid JSON. No explanation, no markdown, no code fences.
 
 Example output:
-{"summary":"Russian forces launched a major drone offensive targeting Kyiv's energy infrastructure, leaving 2 million residents without power overnight. Ukraine's air defence intercepted 34 of 41 drones. The attack is the largest since October and comes ahead of winter.","stat1":"34 of 41 drones intercepted","stat2":"2 million residents lost power","stat3":"Largest attack since October 2024","topic":"conflict"}
+{"summary":"Russian forces launched a major drone offensive targeting Kyiv's energy infrastructure, leaving 2 million residents without power overnight. Ukraine's air defence intercepted 34 of 41 drones. The attack is the largest since October and comes ahead of winter.","stat1":"34 of 41 drones intercepted","stat2":"2 million residents lost power","stat3":"Largest attack since October 2024","topic":"conflict","tags":["Russia-Ukraine War","Energy Infrastructure","Drone Strike","Kyiv"]}
 
 HEADLINE: {{headline}}
 BODY EXCERPT: {{bodyExcerpt}}

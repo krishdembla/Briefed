@@ -23,6 +23,7 @@ const TOPIC_DESCRIPTIONS: Record<PinTopic, string> = {
   health: "Pandemics, medicine, public health",
   climate: "Environment, energy, sustainability",
   tech: "AI, startups, innovation",
+  sports: "Major tournaments, championships, records",
   other: "",
 };
 

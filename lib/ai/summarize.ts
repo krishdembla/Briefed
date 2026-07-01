@@ -9,7 +9,7 @@ const SUMMARIZE_PROMPT = fs.readFileSync(
 );
 
 const VALID_TOPICS: PinTopic[] = [
-  "politics", "economy", "climate", "conflict", "health", "tech", "other",
+  "politics", "economy", "climate", "conflict", "health", "tech", "sports", "other",
 ];
 
 function isValidTopic(value: string): value is PinTopic {
@@ -46,6 +46,7 @@ export async function summarizeArticle(
       stat3: parsed.stat3 || "",
       why_it_matters: parsed.why_it_matters || "",
       topic: isValidTopic(parsed.topic) ? parsed.topic : "other",
+      tags: Array.isArray(parsed.tags) ? parsed.tags.filter((t): t is string => typeof t === "string") : [],
     };
   } catch (err) {
     console.error(`[summarize] Failed for headline "${headline.slice(0, 60)}":`, err);
@@ -58,6 +59,7 @@ export async function summarizeArticle(
       stat3: "",
       why_it_matters: "",
       topic: "other",
+      tags: [],
     };
   }
 }

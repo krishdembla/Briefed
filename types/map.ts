@@ -11,6 +11,7 @@ export interface MapPin {
   why_it_matters: string | null;
   og_image_url: string | null;
   topic: PinTopic | null;
+  tags: string[] | null;
   source_name: string;
   source_url: string;
   published_at: string;
@@ -30,6 +31,7 @@ export const TOPIC_COLORS: Record<string, string> = {
   health: "#ec4899",
   climate: "#14b8a6",
   tech: "#a855f7",
+  sports: "#f59e0b",
   other: "#94a3b8",
 };
 
@@ -43,5 +45,6 @@ export const TOPIC_LABELS: Record<string, string> = {
   health: "Health",
   climate: "Climate",
   tech: "Tech",
+  sports: "Sports",
   other: "Other",
 };
