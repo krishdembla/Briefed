@@ -14,6 +14,7 @@ interface FeedDetailProps {
   onRead: (pinId: string) => void;
   onSaveToggle: (isSaved: boolean) => void;
   onSelectRelated: (pin: MapPin) => void;
+  onNotInterested: (pinId: string) => void;
 }
 
 const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
@@ -38,20 +39,12 @@ function timeAgo(iso: string): string {
 }
 
 interface ReactionCounts {
-  fire: number;
-  complex: number;
-  useful: number;
+  like: number;
 }
-
-const REACTION_META: { key: keyof ReactionCounts; emoji: string; label: string }[] = [
-  { key: "fire",    emoji: "🔥", label: "Big story" },
-  { key: "complex", emoji: "🤔", label: "Complex"   },
-  { key: "useful",  emoji: "💡", label: "Useful"    },
-];
 
 export default function FeedDetail({
   pin, isRead, isSaved, userId, relatedPins,
-  onBack, onRead, onSaveToggle, onSelectRelated,
+  onBack, onRead, onSaveToggle, onSelectRelated, onNotInterested,
 }: FeedDetailProps) {
   const topicColor = TOPIC_COLORS[pin.topic ?? "other"] ?? TOPIC_COLORS.other;
   const topicLabel = TOPIC_LABELS[pin.topic ?? "other"] ?? "Other";
@@ -61,8 +54,7 @@ export default function FeedDetail({
   const [copied, setCopied] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  // Direction D: reactions + read count
-  const [reactionCounts, setReactionCounts] = useState<ReactionCounts>({ fire: 0, complex: 0, useful: 0 });
+  const [reactionCounts, setReactionCounts] = useState<ReactionCounts>({ like: 0 });
   const [userReaction, setUserReaction] = useState<string | null>(null);
   const [readCount, setReadCount] = useState<number>(0);
 
@@ -70,7 +62,7 @@ export default function FeedDetail({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setThreadPins([]);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setReactionCounts({ fire: 0, complex: 0, useful: 0 });
+    setReactionCounts({ like: 0 });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserReaction(null);
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -85,47 +77,32 @@ export default function FeedDetail({
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data) return;
-        setReactionCounts(data.counts ?? { fire: 0, complex: 0, useful: 0 });
+        setReactionCounts(data.counts ?? { like: 0 });
         setUserReaction(data.userReaction ?? null);
         setReadCount(data.readCount ?? 0);
       })
       .catch(() => {});
   }, [pin.id]);
 
-  async function handleReaction(reaction: string) {
+  async function handleLike() {
     if (!userId) return;
-    const optimisticPrev = userReaction;
-    const isToggleOff = userReaction === reaction;
+    const isLiked = userReaction === "like";
 
     // Optimistic update
-    setUserReaction(isToggleOff ? null : reaction);
-    setReactionCounts((prev) => {
-      const next = { ...prev };
-      if (optimisticPrev && optimisticPrev in next) {
-        next[optimisticPrev as keyof ReactionCounts] = Math.max(0, next[optimisticPrev as keyof ReactionCounts] - 1);
-      }
-      if (!isToggleOff) {
-        next[reaction as keyof ReactionCounts]++;
-      }
-      return next;
-    });
+    setUserReaction(isLiked ? null : "like");
+    setReactionCounts((prev) => ({ like: Math.max(0, prev.like + (isLiked ? -1 : 1)) }));
 
     try {
       const res = await fetch(`/api/pins/${pin.id}/reactions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reaction }),
+        body: JSON.stringify({ reaction: "like" }),
       });
       if (!res.ok) throw new Error("Failed");
     } catch {
       // Roll back on failure
-      setUserReaction(optimisticPrev);
-      setReactionCounts((prev) => {
-        const next = { ...prev };
-        if (optimisticPrev && optimisticPrev in next) next[optimisticPrev as keyof ReactionCounts]++;
-        if (!isToggleOff) next[reaction as keyof ReactionCounts] = Math.max(0, next[reaction as keyof ReactionCounts] - 1);
-        return next;
-      });
+      setUserReaction(isLiked ? "like" : null);
+      setReactionCounts((prev) => ({ like: Math.max(0, prev.like + (isLiked ? 1 : -1)) }));
     }
   }
 
@@ -221,28 +198,29 @@ export default function FeedDetail({
           </div>
         )}
 
-        {/* Direction D: Reactions + read count */}
+        {/* Like button + read count */}
         <div className="flex items-center gap-2 mb-4">
-          {REACTION_META.map(({ key, emoji, label }) => {
-            const count = reactionCounts[key];
-            const isActive = userReaction === key;
-            return (
-              <button
-                key={key}
-                onClick={() => handleReaction(key)}
-                title={label}
-                disabled={!userId}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                  isActive
-                    ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                    : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 disabled:cursor-default"
-                }`}
-              >
-                <span>{emoji}</span>
-                {count > 0 && <span>{count}</span>}
-              </button>
-            );
-          })}
+          <button
+            onClick={handleLike}
+            disabled={!userId}
+            title={userReaction === "like" ? "Unlike" : "Like this story"}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+              userReaction === "like"
+                ? "border-rose-300 bg-rose-50 text-rose-600"
+                : "border-zinc-200 bg-zinc-50 text-zinc-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500 disabled:cursor-default"
+            }`}
+          >
+            <svg
+              className="w-3.5 h-3.5"
+              fill={userReaction === "like" ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            {reactionCounts.like > 0 && <span>{reactionCounts.like}</span>}
+          </button>
           {readCount > 1 && (
             <span className="ml-auto text-[11px] text-zinc-400">
               {readCount.toLocaleString()} readers
@@ -251,14 +229,24 @@ export default function FeedDetail({
         </div>
 
         <div className="flex items-center justify-between gap-3 py-4 border-t border-zinc-100">
-          <a
-            href={pin.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-zinc-500 hover:text-indigo-600 underline underline-offset-2 transition-colors truncate"
-          >
-            {pin.source_name}
-          </a>
+          <div className="flex items-center gap-3 min-w-0">
+            <a
+              href={pin.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-zinc-500 hover:text-indigo-600 underline underline-offset-2 transition-colors truncate"
+            >
+              {pin.source_name}
+            </a>
+            {userId && (
+              <button
+                onClick={() => { onBack(); onNotInterested(pin.id); }}
+                className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors shrink-0"
+              >
+                Not interested
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2 shrink-0 relative">
             {/* Share button — native OS sheet on mobile, dropdown fallback on desktop */}
             <button

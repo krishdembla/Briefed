@@ -7,7 +7,7 @@ import type { PinTopic } from "@/types/pipeline";
 import FeedCard from "./FeedCard";
 import FeedDetail from "./FeedDetail";
 
-const STANDARD_TOPICS: TopicFilter[] = ["all", "politics", "economy", "conflict", "health", "climate", "tech"];
+const STANDARD_TOPICS: TopicFilter[] = ["all", "politics", "economy", "conflict", "health", "climate", "tech", "sports"];
 
 const FRESHNESS_OPTIONS: { days: number; label: string }[] = [
   { days: 1.5, label: "Today" },
@@ -18,6 +18,7 @@ const FRESHNESS_OPTIONS: { days: number; label: string }[] = [
 
 interface FeedPanelProps {
   loading?: boolean;
+  isViewportFiltered?: boolean;
   pins: MapPin[];
   readPins: Set<string>;
   savedPinIds: Set<string>;
@@ -36,6 +37,7 @@ interface FeedPanelProps {
   onMarkRead: (pinId: string) => void;
   onSaveToggle: (pinId: string, isSaved: boolean) => void;
   onSelectRelated: (pin: MapPin) => void;
+  onNotInterested: (pinId: string) => void;
   onTopicChange: (topic: TopicFilter) => void;
   onFreshnessChange: (days: number) => void;
   onToggleHideRead: () => void;
@@ -44,10 +46,11 @@ interface FeedPanelProps {
 
 export default function FeedPanel({
   loading = false,
+  isViewportFiltered = false,
   pins, readPins, savedPinIds, userId, activePinId, activeTopic, userTopics,
   freshnessDays, hideRead, topicCounts,
   expandedPin, expandedPinRelated,
-  onActivate, onOpenPin, onCloseExpanded, onMarkRead, onSaveToggle, onSelectRelated,
+  onActivate, onOpenPin, onCloseExpanded, onMarkRead, onSaveToggle, onSelectRelated, onNotInterested,
   onTopicChange, onFreshnessChange, onToggleHideRead, scrollToPinId,
 }: FeedPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -81,6 +84,7 @@ export default function FeedPanel({
           onRead={onMarkRead}
           onSaveToggle={(isSaved) => onSaveToggle(expandedPin.id, isSaved)}
           onSelectRelated={onSelectRelated}
+          onNotInterested={onNotInterested}
         />
       </div>
     );
@@ -231,7 +235,9 @@ export default function FeedPanel({
         )}
         {!loading && pins.length === 0 && (
           <div className="text-center text-sm text-zinc-500 py-12">
-            No stories match these filters.
+            {isViewportFiltered
+              ? "No stories in this area — zoom out to see more."
+              : "No stories match these filters."}
           </div>
         )}
         {!loading && pins.map((pin) => (
@@ -242,6 +248,7 @@ export default function FeedPanel({
             isActive={activePinId === pin.id}
             onActivate={onActivate}
             onOpen={onOpenPin}
+            onNotInterested={onNotInterested}
             scrollRoot={scrollRoot}
           />
         ))}
