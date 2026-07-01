@@ -11,7 +11,7 @@ const PROCESS_PROMPT = fs.readFileSync(
 );
 
 const VALID_TOPICS: PinTopic[] = [
-  "politics", "economy", "climate", "conflict", "health", "tech", "other",
+  "politics", "economy", "climate", "conflict", "health", "tech", "sports", "other",
 ];
 
 function isValidTopic(value: string): value is PinTopic {
@@ -55,7 +55,7 @@ export async function processArticle(
     console.error(`[processArticle] LLM call failed for "${headline.slice(0, 60)}":`, err);
     // Graceful fallback — pin is still stored, just without AI enrichment
     return {
-      summary: { summary: headline, stat1: "", stat2: "", stat3: "", why_it_matters: "", topic: "other" },
+      summary: { summary: headline, stat1: "", stat2: "", stat3: "", why_it_matters: "", topic: "other", tags: [] },
       location: null,
     };
   }
@@ -65,6 +65,7 @@ export async function processArticle(
     ? (parsed.topic as PinTopic)
     : "other";
 
+  const rawTags = parsed.tags;
   const summary: AISummary = {
     summary: summaryText,
     stat1: (parsed.stat1 as string) || "",
@@ -72,6 +73,7 @@ export async function processArticle(
     stat3: (parsed.stat3 as string) || "",
     why_it_matters: (parsed.why_it_matters as string) || "",
     topic,
+    tags: Array.isArray(rawTags) ? (rawTags as unknown[]).filter((t): t is string => typeof t === "string") : [],
   };
 
   const locationName = parsed.locationName as string | null;
