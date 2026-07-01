@@ -91,3 +91,4 @@ Next: Week 4 TBD.
 - Do not make the pipeline dependent on a single news source
 - Do not skip error handling to move faster
 - Do not generate placeholder/mock data and forget to replace it
+- **Do not open a PR or push to main without first verifying the feature works locally.** Run `npm run dev`, exercise the feature in the browser, and confirm the happy path before committing. Untested PRs that break CI or ship broken UX are unacceptable. If a feature cannot be tested locally (e.g. Vercel cron, email send), say so explicitly and document what manual verification was done instead.
