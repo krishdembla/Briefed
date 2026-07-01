@@ -15,6 +15,13 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import type { MapPin } from "@/types/map";
 import { TOPIC_COLORS } from "@/types/map";
 
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
 interface BriefedMapProps {
   geojson: FeatureCollection<Point>;
   onPinClick: (pin: MapPin) => void;
@@ -22,6 +29,8 @@ interface BriefedMapProps {
   // Called once the map is ready, passes up a flyTo function for external navigation
   onFlyTo?: (flyTo: (lng: number, lat: number) => void) => void;
   activePinId?: string | null;
+  // Called on move/zoom end with the new map bounds and zoom level
+  onBoundsChange?: (bounds: MapBounds, zoom: number) => void;
 }
 
 // Build the Mapbox expression that maps topic → colour for individual pins
@@ -32,7 +41,7 @@ const topicColorExpression: mapboxgl.Expression = [
   TOPIC_COLORS.other, // fallback
 ];
 
-export default function BriefedMap({ geojson, onPinClick, onFlyTo, activePinId }: BriefedMapProps) {
+export default function BriefedMap({ geojson, onPinClick, onFlyTo, activePinId, onBoundsChange }: BriefedMapProps) {
   const mapRef = useRef<MapRef>(null);
 
   // Register the flyTo function with the parent once — stable reference via ref
@@ -43,6 +52,17 @@ export default function BriefedMap({ geojson, onPinClick, onFlyTo, activePinId }
   // onFlyTo intentionally omitted — we only want to register once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const emitBounds = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || !onBoundsChange) return;
+    const b = map.getBounds();
+    if (!b) return;
+    onBoundsChange(
+      { north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() },
+      map.getZoom()
+    );
+  }, [onBoundsChange]);
 
   const handleClick = useCallback(
     (event: MapMouseEvent) => {
@@ -88,6 +108,8 @@ export default function BriefedMap({ geojson, onPinClick, onFlyTo, activePinId }
       interactiveLayerIds={["clusters", "unclustered-point"]}
       onClick={handleClick}
       onTouchEnd={handleTouchEnd}
+      onLoad={emitBounds}
+      onMoveEnd={emitBounds}
       cursor="auto"
     >
       <Source

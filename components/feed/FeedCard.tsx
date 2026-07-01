@@ -9,6 +9,7 @@ interface FeedCardProps {
   isActive: boolean;
   onActivate: (pinId: string) => void;
   onOpen: (pin: MapPin) => void;
+  onNotInterested: (pinId: string) => void;
   scrollRoot: HTMLElement | null;
 }
 
@@ -20,17 +21,17 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export default function FeedCard({ pin, isRead, isActive, onActivate, onOpen, scrollRoot }: FeedCardProps) {
+export default function FeedCard({ pin, isRead, isActive, onActivate, onOpen, onNotInterested, scrollRoot }: FeedCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const topicColor = TOPIC_COLORS[pin.topic ?? "other"];
   const topicLabel = TOPIC_LABELS[pin.topic ?? "other"];
   const stats = [pin.stat_1, pin.stat_2, pin.stat_3].filter(Boolean) as string[];
 
-  // Direction C: Progressive reveal — collapsed by default, expands on click
+  // Progressive reveal — collapsed by default, expands on click
   const [expanded, setExpanded] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
-  // Direction A: track image load state — collapse the slot entirely on
-  // failure rather than showing a placeholder, and fade the image in on load
+  // Track image load state — collapse the slot entirely on failure
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -94,7 +95,7 @@ export default function FeedCard({ pin, isRead, isActive, onActivate, onOpen, sc
       )}
 
       <div className="p-4">
-        {/* Top row: topic chip + region + timestamp */}
+        {/* Top row: topic chip + region + timestamp + overflow menu */}
         <div className="flex items-center justify-between gap-2 mb-2.5">
           <div className="flex items-center gap-2 min-w-0">
             <span
@@ -107,7 +108,36 @@ export default function FeedCard({ pin, isRead, isActive, onActivate, onOpen, sc
               <span className="text-[11px] text-zinc-500 truncate">{pin.region_label}</span>
             )}
           </div>
-          <span className="text-[11px] text-zinc-400 shrink-0">{timeAgo(pin.published_at)}</span>
+          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+            <span className="text-[11px] text-zinc-400">{timeAgo(pin.published_at)}</span>
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu((v) => !v)}
+                className="w-6 h-6 flex items-center justify-center rounded-full text-zinc-300 hover:text-zinc-500 hover:bg-zinc-100 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                aria-label="More options"
+              >
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                  <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
+                </svg>
+              </button>
+              {showMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-zinc-200 rounded-xl shadow-lg py-1 w-40">
+                    <button
+                      onClick={() => { setShowMenu(false); onNotInterested(pin.id); }}
+                      className="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-600 hover:bg-zinc-50 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M18 12H6" />
+                      </svg>
+                      Not interested
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Headline — always visible */}

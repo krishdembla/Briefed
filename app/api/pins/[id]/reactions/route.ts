@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/db/supabase-service";
 import { createSupabaseServerClient } from "@/lib/db/supabase-server";
 
-const VALID_REACTIONS = new Set(["fire", "complex", "useful"]);
+const VALID_REACTIONS = new Set(["like"]);
 
 // GET /api/pins/:id/reactions
 // Returns reaction counts, the current user's reaction, and the total read count.
@@ -51,10 +51,9 @@ export async function GET(
     return NextResponse.json({ error: "Failed to fetch reactions" }, { status: 500 });
   }
 
-  const counts = { fire: 0, complex: 0, useful: 0 };
+  const counts = { like: 0 };
   for (const row of reactionsResult.data ?? []) {
-    const key = row.reaction as keyof typeof counts;
-    if (key in counts) counts[key]++;
+    if (row.reaction === "like") counts.like++;
   }
 
   return NextResponse.json({

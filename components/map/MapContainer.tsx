@@ -15,9 +15,12 @@ import { getPreferences } from "@/lib/db/preferences";
 import { getSavedPinIds } from "@/lib/db/saves";
 import { recordRead } from "@/lib/db/reads";
 import type { PinTopic } from "@/types/pipeline";
+import type { MapBounds } from "./BriefedMap";
 
 // Dynamic import avoids SSR entirely for the Mapbox component
 const BriefedMap = dynamic(() => import("./BriefedMap"), { ssr: false });
+
+const VIEWPORT_ZOOM_THRESHOLD = 3;
 
 function getTodayKey() {
   return `briefed-checkin-${new Date().toISOString().slice(0, 10)}`;
@@ -60,6 +63,11 @@ export default function MapContainer() {
   const [mobileTab, setMobileTab] = useState<"feed" | "map">("feed");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [trendingPins, setTrendingPins] = useState<MapPin[]>([]);
+  const [notInterestedIds, setNotInterestedIds] = useState<Set<string>>(new Set());
+  const [suppressedTags, setSuppressedTags] = useState<string[]>([]);
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  const [mapZoom, setMapZoom] = useState(2);
+  const boundsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trendingFetchedRef = useRef(false);
   const checkinRecordedRef = useRef(false);
   const [checkinFailed, setCheckinFailed] = useState(false);
@@ -128,6 +136,14 @@ export default function MapContainer() {
         if (savedIds.length > 0) {
           setSavedPinIds(new Set(savedIds));
         }
+
+        // Restore dismissed pins + suppressed tags for the For You filter
+        const [dismissedIds, suppressed] = await Promise.all([
+          fetch("/api/me/not-interested").then((r) => r.ok ? r.json() as Promise<string[]> : []).catch(() => []),
+          fetch("/api/me/suppressed-tags").then((r) => r.ok ? r.json() as Promise<string[]> : []).catch(() => []),
+        ]);
+        if (dismissedIds.length > 0) setNotInterestedIds(new Set(dismissedIds));
+        if (suppressed.length > 0) setSuppressedTags(suppressed);
       }
     });
   }, []);
@@ -149,6 +165,23 @@ export default function MapContainer() {
     }
   }, [readPins, userId]);
 
+  const handleNotInterested = (pinId: string) => {
+    setNotInterestedIds((prev) => new Set(prev).add(pinId));
+    // Close detail view if this pin was expanded
+    if (expandedPin?.id === pinId) setExpandedPin(null);
+    if (userId) {
+      fetch(`/api/pins/${pinId}/not-interested`, { method: "POST" }).catch(console.error);
+    }
+  };
+
+  const handleBoundsChange = (bounds: MapBounds, zoom: number) => {
+    if (boundsDebounceRef.current) clearTimeout(boundsDebounceRef.current);
+    boundsDebounceRef.current = setTimeout(() => {
+      setMapBounds(bounds);
+      setMapZoom(zoom);
+    }, 150);
+  };
+
   const handleRead = (pinId: string) => {
     setReadPins((prev) => {
       const next = new Set(prev).add(pinId);
@@ -158,14 +191,20 @@ export default function MapContainer() {
     if (userId) recordRead(userId, pinId).catch(console.error);
   };
 
-  // Filter pins by topic + freshness + hideRead (shared by feed and map)
+  // Filter pins by topic + freshness + hideRead + dismissed (shared by feed and map)
   const filteredPins = useMemo<MapPin[]>(() => {
     if (activeTopic === "trending") return trendingPins;
     // eslint-disable-next-line react-hooks/purity
     const cutoff = Date.now() - freshnessDays * 24 * 60 * 60 * 1000;
-    let filtered = pins.filter((p) => new Date(p.published_at).getTime() >= cutoff);
+    let filtered = pins.filter(
+      (p) => new Date(p.published_at).getTime() >= cutoff && !notInterestedIds.has(p.id)
+    );
     if (activeTopic === "foryou" && userTopics.length > 0) {
       filtered = filtered.filter((p) => userTopics.includes((p.topic ?? "other") as PinTopic));
+      // Soft-suppress pins whose fine-grained tags the user has repeatedly dismissed
+      if (suppressedTags.length > 0) {
+        filtered = filtered.filter((p) => !p.tags?.some((t) => suppressedTags.includes(t)));
+      }
     } else if (activeTopic !== "all" && activeTopic !== "foryou") {
       filtered = filtered.filter((p) => p.topic === activeTopic);
     }
@@ -173,7 +212,19 @@ export default function MapContainer() {
     return filtered.sort(
       (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
     );
-  }, [pins, activeTopic, userTopics, freshnessDays, readPins, hideRead, trendingPins]);
+  }, [pins, activeTopic, userTopics, freshnessDays, readPins, hideRead, trendingPins, notInterestedIds, suppressedTags]);
+
+  const viewportPins = useMemo<MapPin[]>(() => {
+    if (!mapBounds || mapZoom <= VIEWPORT_ZOOM_THRESHOLD) return filteredPins;
+    // Handle antimeridian: east < west when the viewport crosses the ±180° line
+    const crossesAntimeridian = mapBounds.east < mapBounds.west;
+    return filteredPins.filter((p) => {
+      if (p.lat < mapBounds.south || p.lat > mapBounds.north) return false;
+      return crossesAntimeridian
+        ? p.lng >= mapBounds.west || p.lng <= mapBounds.east
+        : p.lng >= mapBounds.west && p.lng <= mapBounds.east;
+    });
+  }, [filteredPins, mapBounds, mapZoom]);
 
   const geojson = useMemo<FeatureCollection<Point>>(() => ({
     type: "FeatureCollection",
@@ -289,7 +340,8 @@ export default function MapContainer() {
       <div className="hidden md:flex flex-col w-[42%] max-w-[560px] min-w-[360px] h-full">
         <FeedPanel
           loading={loading}
-          pins={filteredPins}
+          pins={viewportPins}
+          isViewportFiltered={mapZoom > VIEWPORT_ZOOM_THRESHOLD}
           readPins={readPins}
           savedPinIds={savedPinIds}
           userId={userId}
@@ -307,6 +359,7 @@ export default function MapContainer() {
           onMarkRead={handleRead}
           onSaveToggle={handleSaveToggle}
           onSelectRelated={handleSelectRelatedFromFeed}
+          onNotInterested={handleNotInterested}
           onTopicChange={handleTopicChange}
           onFreshnessChange={setFreshnessDays}
           onToggleHideRead={() => setHideRead((v) => !v)}
@@ -321,7 +374,7 @@ export default function MapContainer() {
           {mobileTab === "feed" && (
             <div className="absolute inset-0">
               <FeedPanel
-                pins={filteredPins}
+                pins={viewportPins}
                 readPins={readPins}
                 savedPinIds={savedPinIds}
                 userId={userId}
@@ -339,6 +392,7 @@ export default function MapContainer() {
                 onMarkRead={handleRead}
                 onSaveToggle={handleSaveToggle}
                 onSelectRelated={handleSelectRelatedFromFeed}
+                onNotInterested={handleNotInterested}
                 onTopicChange={handleTopicChange}
                 onFreshnessChange={setFreshnessDays}
                 onToggleHideRead={() => setHideRead((v) => !v)}
@@ -355,6 +409,7 @@ export default function MapContainer() {
                   readPins={readPins}
                   onFlyTo={(fn) => { flyToRef.current = fn; }}
                   activePinId={activePinId}
+                  onBoundsChange={handleBoundsChange}
                 />
               )}
               {userId && userEmail && (
