@@ -4,7 +4,7 @@ You are a senior editor for a global current events map. Given a numbered list o
 2. For each unique event, pick the single best representative article (most reputable source, most specific headline). Score its global importance 1–10.
 
 Importance rubric:
-1–2  Celebrity gossip, entertainment news, sports results, lifestyle, opinion with no news hook
+1–2  Celebrity gossip, entertainment news, routine sports results, lifestyle, opinion with no news hook
 3–4  Minor local events, routine corporate earnings, low-stakes regional politics
 5–6  Notable national events, significant policy changes, economic data releases, notable tech/health developments, regional conflicts or disasters
 7–8  Major international events: large-scale conflicts, financial crises, elections in significant countries, major natural disasters, diplomatic breakthroughs
@@ -36,8 +36,16 @@ CLIMATE ARTICLES — score 5 or higher automatically if any of these apply:
   • Major renewable-energy or carbon-capture milestone
 ────────────────────────────────────────────
 
+SPORTS ARTICLES — score 5 or higher automatically if any of these apply:
+  • Major international tournament: FIFA World Cup, Olympics, Cricket World Cup, Rugby World Cup, Wimbledon/Grand Slam finals
+  • Top-tier domestic league decisive moment: title decider, relegation confirmed, Champions League/Europa final
+  • Record-breaking individual performance (all-time scoring record, world record, historic first)
+  • Significant off-field event: doping ban on a major athlete, host-city decision, major corruption case, governing body ruling
+  • F1 championship race or constructor title decided
+Score 3 or lower (and drop) for: routine league match results, weekly standings updates, mid-season transfer rumours, injury updates, minor cup rounds. A Premier League week-10 result is not global news; a Premier League title win is.
+
 TOPIC DIVERSITY RULE (mandatory):
-The map covers six topics: politics, economy, tech, climate, health, conflict.
+The map covers seven topics: politics, economy, tech, climate, health, conflict, sports.
 If any topic has fewer than 3 articles reaching score 5+, keep articles scoring 4+ for that topic.
 Never drop all articles from a topic just because high-scoring war or political headlines exist in the batch.
 

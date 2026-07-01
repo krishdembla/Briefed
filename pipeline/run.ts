@@ -207,6 +207,7 @@ async function processArticle(article: RawArticle, runId: string): Promise<Pin> 
     country_code: location?.countryCode || null,
     region_label: location?.regionLabel || null,
     topic: summary.topic,
+    tags: summary.tags ?? [],
     pipeline_run_id: runId,
     ai_processed: aiProcessed,
     geo_processed: !!location?.lat,

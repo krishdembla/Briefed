@@ -109,6 +109,13 @@ const RSS_FEEDS: { url: string; sourceName: string }[] = [
   // Economy / markets
   { url: "https://feeds.ft.com/rss/home/uk", sourceName: "Financial Times" },
   { url: "https://www.imf.org/en/News/rss?language=eng", sourceName: "IMF" },
+  // Sports — major leagues + tier-1 international tournaments only.
+  // Routine match results and transfer rumours are filtered by clusterByEvent importance scoring.
+  { url: "https://feeds.bbci.co.uk/sport/rss.xml", sourceName: "BBC Sport" },
+  { url: "https://www.skysports.com/rss/12040", sourceName: "Sky Sports Football" },
+  { url: "https://www.espncricinfo.com/rss/content/story/feeds/0.xml", sourceName: "ESPNcricinfo" },
+  { url: "https://theathletic.com/rss/", sourceName: "The Athletic" },
+  { url: "https://www.espn.com/espn/rss/news", sourceName: "ESPN" },
   // Africa — additional sources
   { url: "https://www.premiumtimesng.com/feed", sourceName: "Premium Times Nigeria" },
   { url: "https://www.theeastafrican.co.ke/tea/rss", sourceName: "The East African" },

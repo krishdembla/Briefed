@@ -11,7 +11,9 @@ const groq = new OpenAI({
   baseURL: "https://api.groq.com/openai/v1",
 });
 
-export const LLM_MODEL = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
+// llama-3.3-70b-versatile is deprecated (decommissioned Aug 16 2026).
+// Default to qwen/qwen3-27b per Groq's migration guidance; override via GROQ_MODEL env var.
+export const LLM_MODEL = process.env.GROQ_MODEL ?? "qwen/qwen3-27b";
 
 // Sends a single user prompt to Groq and returns the raw text response.
 // Retries up to 3 times on 429 rate limit errors, waiting the retry-after delay each time.
