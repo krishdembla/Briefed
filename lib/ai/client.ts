@@ -27,7 +27,10 @@ export async function callLLM(prompt: string, maxTokens: number): Promise<string
         max_tokens: maxTokens,
         messages: [{ role: "user", content: prompt }],
       });
-      return completion.choices[0]?.message?.content ?? "";
+      const content = completion.choices[0]?.message?.content ?? "";
+      // Qwen3-class models emit a <think>...</think> block before the JSON payload.
+      // Strip it so downstream JSON.parse calls see only the response.
+      return content.replace(/<think>[\s\S]*?<\/think>\s*/gi, "").trim();
     } catch (err: unknown) {
       const e = err as { status?: number; headers?: Record<string, string> };
       if (e?.status === 429 && attempt < MAX_RETRIES - 1) {
