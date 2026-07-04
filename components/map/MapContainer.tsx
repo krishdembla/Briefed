@@ -72,6 +72,7 @@ export default function MapContainer() {
   const checkinRecordedRef = useRef(false);
   const [checkinFailed, setCheckinFailed] = useState(false);
   const flyToRef = useRef<((lng: number, lat: number) => void) | null>(null);
+  const resetViewRef = useRef<(() => void) | null>(null);
 
   // Fetch pins
   useEffect(() => {
@@ -262,11 +263,12 @@ export default function MapContainer() {
       .slice(0, 3);
   }, [pins, expandedPin, readPins]);
 
-  // Feed scroll → activate pin → fly map to it
+  // Feed scroll → highlight matching pin on the map. Intentionally does NOT
+  // fly the map: the observer fires whenever the feed list changes (including
+  // when the map viewport itself changed), so flying here would fight the
+  // user's zoom/pan and trap them in the current region.
   const handleActivate = (pinId: string) => {
     setActivePinId(pinId);
-    const pin = pins.find((p) => p.id === pinId);
-    if (pin) flyToRef.current?.(pin.lng, pin.lat);
   };
 
   // Map click → expand inline in the left feed panel (consistent with feed card clicks)
@@ -290,9 +292,12 @@ export default function MapContainer() {
     setActivePinId(null);
   };
 
-  // Lazy-fetch trending pins on first activation of the trending tab
+  // Lazy-fetch trending pins on first activation of the trending tab.
+  // Also reset the map to the world view so the feed isn't stuck showing only
+  // pins from wherever the user was previously zoomed in.
   const handleTopicChange = (topic: TopicFilter) => {
     setActiveTopic(topic);
+    resetViewRef.current?.();
     if (topic === "trending" && !trendingFetchedRef.current) {
       trendingFetchedRef.current = true;
       fetch("/api/pins/trending")
@@ -408,6 +413,7 @@ export default function MapContainer() {
                   onPinClick={handleMapPinClick}
                   readPins={readPins}
                   onFlyTo={(fn) => { flyToRef.current = fn; }}
+                  onResetView={(fn) => { resetViewRef.current = fn; }}
                   activePinId={activePinId}
                   onBoundsChange={handleBoundsChange}
                 />
@@ -465,6 +471,7 @@ export default function MapContainer() {
             onPinClick={handleMapPinClick}
             readPins={readPins}
             onFlyTo={(fn) => { flyToRef.current = fn; }}
+            onResetView={(fn) => { resetViewRef.current = fn; }}
             activePinId={activePinId}
             onBoundsChange={handleBoundsChange}
           />
