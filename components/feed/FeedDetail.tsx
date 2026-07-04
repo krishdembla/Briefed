@@ -114,10 +114,10 @@ export default function FeedDetail({
     if (navigator.share) {
       try {
         await navigator.share({ title: pin.headline, url });
+        return; // only skip dropdown on successful native share
       } catch {
-        // User cancelled the native sheet — no-op
+        // fall through to dropdown (e.g. localhost NotAllowedError, user cancelled)
       }
-      return;
     }
     setShowShareMenu((prev) => !prev);
   }

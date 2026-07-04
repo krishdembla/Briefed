@@ -14,6 +14,7 @@ const SELECTABLE_TOPICS: PinTopic[] = [
   "health",
   "climate",
   "tech",
+  "sports",
 ];
 
 const TOPIC_DESCRIPTIONS: Record<PinTopic, string> = {

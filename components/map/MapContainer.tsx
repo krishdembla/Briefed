@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { FeatureCollection, Point } from "geojson";
 import type { MapPin, TopicFilter } from "@/types/map";
@@ -174,13 +174,13 @@ export default function MapContainer() {
     }
   };
 
-  const handleBoundsChange = (bounds: MapBounds, zoom: number) => {
+  const handleBoundsChange = useCallback((bounds: MapBounds, zoom: number) => {
     if (boundsDebounceRef.current) clearTimeout(boundsDebounceRef.current);
     boundsDebounceRef.current = setTimeout(() => {
       setMapBounds(bounds);
       setMapZoom(zoom);
     }, 150);
-  };
+  }, []);
 
   const handleRead = (pinId: string) => {
     setReadPins((prev) => {
@@ -466,6 +466,7 @@ export default function MapContainer() {
             readPins={readPins}
             onFlyTo={(fn) => { flyToRef.current = fn; }}
             activePinId={activePinId}
+            onBoundsChange={handleBoundsChange}
           />
         )}
 
