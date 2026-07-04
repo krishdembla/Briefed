@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runPipeline } from "@/pipeline/run";
 
+export const maxDuration = 300;
+
 // Protect this endpoint with a secret header so it can't be triggered by anyone.
 // Set PIPELINE_SECRET in your Vercel environment variables.
 export async function POST(request: NextRequest) {
