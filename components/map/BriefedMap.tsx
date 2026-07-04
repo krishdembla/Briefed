@@ -28,10 +28,15 @@ interface BriefedMapProps {
   readPins: Set<string>;
   // Called once the map is ready, passes up a flyTo function for external navigation
   onFlyTo?: (flyTo: (lng: number, lat: number) => void) => void;
+  // Called once the map is ready, passes up a resetView function that eases
+  // back to the default world view (used when the user changes topics)
+  onResetView?: (resetView: () => void) => void;
   activePinId?: string | null;
   // Called on move/zoom end with the new map bounds and zoom level
   onBoundsChange?: (bounds: MapBounds, zoom: number) => void;
 }
+
+const DEFAULT_VIEW = { longitude: 15, latitude: 20, zoom: 2 };
 
 // Build the Mapbox expression that maps topic → colour for individual pins
 const topicColorExpression: mapboxgl.Expression = [
@@ -41,15 +46,22 @@ const topicColorExpression: mapboxgl.Expression = [
   TOPIC_COLORS.other, // fallback
 ];
 
-export default function BriefedMap({ geojson, onPinClick, onFlyTo, activePinId, onBoundsChange }: BriefedMapProps) {
+export default function BriefedMap({ geojson, onPinClick, onFlyTo, onResetView, activePinId, onBoundsChange }: BriefedMapProps) {
   const mapRef = useRef<MapRef>(null);
 
-  // Register the flyTo function with the parent once — stable reference via ref
+  // Register flyTo + resetView with the parent once — stable ref-based handoff
   useEffect(() => {
     onFlyTo?.((lng, lat) => {
       mapRef.current?.flyTo({ center: [lng, lat], zoom: 5, duration: 700 });
     });
-  // onFlyTo intentionally omitted — we only want to register once on mount
+    onResetView?.(() => {
+      mapRef.current?.easeTo({
+        center: [DEFAULT_VIEW.longitude, DEFAULT_VIEW.latitude],
+        zoom: DEFAULT_VIEW.zoom,
+        duration: 600,
+      });
+    });
+  // Intentionally only register on mount — parent holds the refs
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -102,7 +114,7 @@ export default function BriefedMap({ geojson, onPinClick, onFlyTo, activePinId, 
     <Map
       ref={mapRef}
       mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-      initialViewState={{ longitude: 15, latitude: 20, zoom: 2 }}
+      initialViewState={DEFAULT_VIEW}
       style={{ width: "100%", height: "100%" }}
       mapStyle="mapbox://styles/mapbox/streets-v12"
       interactiveLayerIds={["clusters", "unclustered-point"]}
