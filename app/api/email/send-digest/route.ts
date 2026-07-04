@@ -9,6 +9,10 @@ import BriefedDigest from "@/emails/BriefedDigest";
 import { sendAlertEmail } from "@/lib/email/alerts";
 import { selectDigestPins, buildSubject, type DigestPin } from "@/lib/digestUtils";
 
+// One LLM call per user + Resend sends — 60s is ample, but set explicitly to
+// avoid being caught by Vercel's default 10s limit on non-cron invocations.
+export const maxDuration = 60;
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 

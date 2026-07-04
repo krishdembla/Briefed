@@ -2,6 +2,10 @@ import "@/lib/env"; // validates required env vars at module load
 import { NextRequest, NextResponse } from "next/server";
 import { runPipeline } from "@/pipeline/run";
 
+// Pipeline can process up to 100 articles through LLM — needs the full cron budget.
+// Vercel Pro cron functions allow up to 300s; regular functions cap at 60s.
+export const maxDuration = 300;
+
 function isAuthorized(request: NextRequest): boolean {
   const auth = request.headers.get("authorization");
   // Vercel Cron sends Bearer <CRON_SECRET>; manual triggers use PIPELINE_SECRET
