@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS pins (
   region_label   text,
 
   -- Taxonomy
-  topic          text CHECK (topic IN ('politics', 'economy', 'climate', 'conflict', 'health', 'tech', 'other')),
+  topic          text CHECK (topic IN ('politics', 'economy', 'climate', 'conflict', 'health', 'tech', 'sports', 'other')),
 
   -- Pipeline bookkeeping
   pipeline_run_id  uuid REFERENCES pipeline_runs(id),
