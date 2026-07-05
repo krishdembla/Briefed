@@ -23,6 +23,23 @@ export interface PipelineResult {
 // Main pipeline entry point. Fetches → deduplicates → geo-tags → summarizes → stores.
 // Designed to be called from the API route or the local script.
 export async function runPipeline(): Promise<PipelineResult> {
+  // Clean up zombie runs: any run still "running" after 10 minutes was killed by Vercel's
+  // function timeout without going through finishRun. Mark them as errors so the dashboard
+  // reflects reality and they don't accumulate indefinitely.
+  const zombieCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const { error: zombieError } = await supabase
+    .from("pipeline_runs")
+    .update({
+      status: "error",
+      finished_at: new Date().toISOString(),
+      error_msg: "Run timed out — killed by Vercel function limit before completing",
+    })
+    .eq("status", "running")
+    .lt("started_at", zombieCutoff);
+  if (zombieError) {
+    console.warn("[pipeline] Failed to clean up zombie runs:", zombieError.message);
+  }
+
   // Rate limit: reject if a run completed successfully within the last RATE_LIMIT_MINUTES
   const rateLimitSince = new Date(Date.now() - RATE_LIMIT_MINUTES * 60 * 1000).toISOString();
   const { data: recentRun } = await supabase
@@ -51,126 +68,152 @@ export async function runPipeline(): Promise<PipelineResult> {
   }
 
   const runId: string = run.id;
+
+  // Hoisted so the catch block can report partial progress if the pipeline throws
+  // unexpectedly mid-run (e.g. Supabase connection drop, memory error).
+  let pinsFetched = 0;
+  let pinsStored = 0;
+  let pinsAiDone = 0;
   const errors: string[] = [];
+  const pins: Pin[] = [];
+  // Tracks whether finishRun was already called via an early-return path so
+  // the catch block doesn't call it a second time.
+  let runFinished = false;
 
   console.log(`[pipeline] Run ${runId} started`);
 
-  // ── Step 1: Fetch ──────────────────────────────────────────────
-  const fetchResults = await Promise.allSettled([
-    fetchFromNewsApi(),
-    fetchFromFinnhub(),
-    fetchFromRss(),
-  ]);
+  try {
+    // ── Step 1: Fetch ──────────────────────────────────────────────
+    const fetchResults = await Promise.allSettled([
+      fetchFromNewsApi(),
+      fetchFromFinnhub(),
+      fetchFromRss(),
+    ]);
 
-  const allArticles: RawArticle[] = [];
-  const sourceNames = ["NewsAPI", "Finnhub", "RSS"];
+    const allArticles: RawArticle[] = [];
+    const sourceNames = ["NewsAPI", "Finnhub", "RSS"];
 
-  for (let i = 0; i < fetchResults.length; i++) {
-    const result = fetchResults[i];
-    if (result.status === "fulfilled") {
-      console.log(`[pipeline] ${sourceNames[i]}: fetched ${result.value.length} articles`);
-      allArticles.push(...result.value);
-    } else {
-      const msg = `${sourceNames[i]} fetch failed: ${result.reason}`;
-      console.error(`[pipeline] ${msg}`);
-      errors.push(msg);
-    }
-  }
-
-  const pinsFetched = allArticles.length;
-  console.log(`[pipeline] Total fetched: ${pinsFetched}`);
-
-  // ── Step 2: Deduplicate ────────────────────────────────────────
-  const freshArticles = await deduplicate(allArticles);
-  console.log(`[pipeline] After dedup: ${freshArticles.length} new articles to process`);
-
-  if (freshArticles.length === 0) {
-    await finishRun(runId, "success", { pinsFetched, pinsStored: 0, pinsAiDone: 0 });
-    return { runId, pinsFetched, pinsStored: 0, pinsAiDone: 0, errors };
-  }
-
-  // ── Step 3: Cluster same-event duplicates + importance filter ──
-  // One Claude call for the whole batch — groups articles covering the same
-  // event and drops anything below importance threshold (e.g. celebrity news).
-  const clustered = await clusterByEvent(freshArticles);
-  // Hard cap — paid tier can handle more, but 100 keeps cost predictable (~$0.05/run).
-  const MAX_ARTICLES = 100;
-  const importantArticles = clustered.slice(0, MAX_ARTICLES);
-  console.log(`[pipeline] After clustering + importance filter: ${clustered.length} articles (capped to ${importantArticles.length})`);
-
-  if (importantArticles.length === 0) {
-    await finishRun(runId, "success", { pinsFetched, pinsStored: 0, pinsAiDone: 0 });
-    return { runId, pinsFetched, pinsStored: 0, pinsAiDone: 0, errors };
-  }
-
-  // ── Steps 4 + 5: One combined LLM call per article (summary + geo) ─
-  // Paid-tier Groq allows much higher throughput — batch 20 at once with minimal delay.
-  const BATCH_SIZE = 20;
-  const BATCH_DELAY_MS = 200;
-  const pins: Pin[] = [];
-  let pinsAiDone = 0;
-
-  for (let i = 0; i < importantArticles.length; i += BATCH_SIZE) {
-    const batch = importantArticles.slice(i, i + BATCH_SIZE);
-
-    const processed = await Promise.allSettled(
-      batch.map((article) => processArticle(article, runId))
-    );
-
-    for (let j = 0; j < processed.length; j++) {
-      const result = processed[j];
+    for (let i = 0; i < fetchResults.length; i++) {
+      const result = fetchResults[i];
       if (result.status === "fulfilled") {
-        pins.push(result.value);
-        if (result.value.ai_processed) pinsAiDone++;
+        console.log(`[pipeline] ${sourceNames[i]}: fetched ${result.value.length} articles`);
+        allArticles.push(...result.value);
       } else {
-        const msg = `Failed to process article "${batch[j].headline.slice(0, 60)}": ${result.reason}`;
+        const msg = `${sourceNames[i]} fetch failed: ${result.reason}`;
         console.error(`[pipeline] ${msg}`);
-        Sentry.captureException(result.reason, { extra: { headline: batch[j].headline } });
         errors.push(msg);
       }
     }
 
-    console.log(`[pipeline] Processed batch ${Math.floor(i / BATCH_SIZE) + 1} — ${pins.length}/${importantArticles.length} done`);
+    pinsFetched = allArticles.length;
+    console.log(`[pipeline] Total fetched: ${pinsFetched}`);
 
-    // Throttle between batches to stay under Claude API rate limits
-    if (i + BATCH_SIZE < importantArticles.length) {
-      await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
+    // ── Step 2: Deduplicate ────────────────────────────────────────
+    const freshArticles = await deduplicate(allArticles);
+    console.log(`[pipeline] After dedup: ${freshArticles.length} new articles to process`);
+
+    if (freshArticles.length === 0) {
+      runFinished = true;
+      await finishRun(runId, "success", { pinsFetched, pinsStored: 0, pinsAiDone: 0 });
+      return { runId, pinsFetched, pinsStored: 0, pinsAiDone: 0, errors };
     }
-  }
 
-  // ── Step 6: Store ──────────────────────────────────────────────
-  let pinsStored = 0;
+    // ── Step 3: Cluster same-event duplicates + importance filter ──
+    // One LLM call for the whole batch — groups articles covering the same
+    // event and drops anything below importance threshold (e.g. celebrity news).
+    const clustered = await clusterByEvent(freshArticles);
+    // Hard cap — paid tier can handle more, but 100 keeps cost predictable (~$0.05/run).
+    const MAX_ARTICLES = 100;
+    const importantArticles = clustered.slice(0, MAX_ARTICLES);
+    console.log(`[pipeline] After clustering + importance filter: ${clustered.length} articles (capped to ${importantArticles.length})`);
 
-  if (pins.length > 0) {
-    // Upsert in chunks of 50 to stay within Supabase payload limits
-    const CHUNK_SIZE = 50;
-    for (let i = 0; i < pins.length; i += CHUNK_SIZE) {
-      const chunk = pins.slice(i, i + CHUNK_SIZE);
-      const { error: upsertError } = await supabase
-        .from("pins")
-        .upsert(chunk, { onConflict: "source_url", ignoreDuplicates: true });
+    if (importantArticles.length === 0) {
+      runFinished = true;
+      await finishRun(runId, "success", { pinsFetched, pinsStored: 0, pinsAiDone: 0 });
+      return { runId, pinsFetched, pinsStored: 0, pinsAiDone: 0, errors };
+    }
 
-      if (upsertError) {
-        const msg = `Upsert chunk ${Math.floor(i / CHUNK_SIZE) + 1} failed: ${upsertError.message}`;
-        console.error(`[pipeline] ${msg}`);
-        errors.push(msg);
-      } else {
-        pinsStored += chunk.length;
+    // ── Steps 4 + 5: One combined LLM call per article (summary + geo) ─
+    // Paid-tier Groq allows much higher throughput — batch 20 at once with minimal delay.
+    const BATCH_SIZE = 20;
+    const BATCH_DELAY_MS = 200;
+
+    for (let i = 0; i < importantArticles.length; i += BATCH_SIZE) {
+      const batch = importantArticles.slice(i, i + BATCH_SIZE);
+
+      const processed = await Promise.allSettled(
+        batch.map((article) => processArticle(article, runId))
+      );
+
+      for (let j = 0; j < processed.length; j++) {
+        const result = processed[j];
+        if (result.status === "fulfilled") {
+          pins.push(result.value);
+          if (result.value.ai_processed) pinsAiDone++;
+        } else {
+          const msg = `Failed to process article "${batch[j].headline.slice(0, 60)}": ${result.reason}`;
+          console.error(`[pipeline] ${msg}`);
+          Sentry.captureException(result.reason, { extra: { headline: batch[j].headline } });
+          errors.push(msg);
+        }
+      }
+
+      console.log(`[pipeline] Processed batch ${Math.floor(i / BATCH_SIZE) + 1} — ${pins.length}/${importantArticles.length} done`);
+
+      if (i + BATCH_SIZE < importantArticles.length) {
+        await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
       }
     }
+
+    // ── Step 6: Store ──────────────────────────────────────────────
+    if (pins.length > 0) {
+      // Upsert in chunks of 50 to stay within Supabase payload limits.
+      // Use .select("id") so we count only rows actually inserted —
+      // ignoreDuplicates silently skips conflicts and the upsert still
+      // succeeds, so chunk.length would overcount if we don't check.
+      const CHUNK_SIZE = 50;
+      for (let i = 0; i < pins.length; i += CHUNK_SIZE) {
+        const chunk = pins.slice(i, i + CHUNK_SIZE);
+        const { data: inserted, error: upsertError } = await supabase
+          .from("pins")
+          .upsert(chunk, { onConflict: "source_url", ignoreDuplicates: true })
+          .select("id");
+
+        if (upsertError) {
+          const msg = `Upsert chunk ${Math.floor(i / CHUNK_SIZE) + 1} failed: ${upsertError.message}`;
+          console.error(`[pipeline] ${msg}`);
+          errors.push(msg);
+        } else {
+          pinsStored += inserted?.length ?? 0;
+        }
+      }
+    }
+
+    console.log(`[pipeline] Run ${runId} complete — stored: ${pinsStored}, AI done: ${pinsAiDone}, errors: ${errors.length}`);
+
+    runFinished = true;
+    await finishRun(runId, errors.length > 0 ? "error" : "success", {
+      pinsFetched,
+      pinsStored,
+      pinsAiDone,
+      errorMsg: errors.length > 0 ? errors.join("; ") : undefined,
+    });
+  } catch (err) {
+    // An unexpected exception escaped the pipeline (Supabase dropped, OOM, etc.).
+    // If finishRun hasn't been called yet, mark the run as error now so it doesn't
+    // stay "running" until the next zombie cleanup cycle.
+    if (!runFinished) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[pipeline] Unexpected error in run ${runId}:`, errMsg);
+      Sentry.captureException(err, { extra: { runId, pinsFetched, pinsStored, pinsAiDone } });
+      await finishRun(runId, "error", { pinsFetched, pinsStored, pinsAiDone, errorMsg: errMsg });
+    }
+    throw err;
   }
-
-  console.log(`[pipeline] Run ${runId} complete — stored: ${pinsStored}, AI done: ${pinsAiDone}, errors: ${errors.length}`);
-
-  await finishRun(runId, errors.length > 0 ? "error" : "success", {
-    pinsFetched,
-    pinsStored,
-    pinsAiDone,
-    errorMsg: errors.length > 0 ? errors.join("; ") : undefined,
-  });
 
   // ── Step 7: Detect story threads ──────────────────────────────────────────
-  // Non-fatal — a failure here must never mark the pipeline run as errored.
+  // Runs after finishRun so a failure here never changes the run's recorded status.
+  // Topics are processed in parallel to keep total time bounded.
   if (pinsStored > 0) {
     console.log(`[pipeline] Detecting story threads...`);
     const threadsFound = await detectThreads(runId).catch((err) => {

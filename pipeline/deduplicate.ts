@@ -32,7 +32,9 @@ export async function deduplicate(articles: RawArticle[]): Promise<RawArticle[]>
     }
 
     for (const row of data ?? []) {
-      existingUrls.add(row.source_url.toLowerCase());
+      // Normalize the DB URL the same way we normalize incoming URLs so that
+      // old pins stored with tracking params still match their cleaned versions.
+      existingUrls.add(normalizeUrl(row.source_url));
     }
   }
 
