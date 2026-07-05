@@ -3,7 +3,11 @@ import path from "path";
 import { callLLM } from "./client";
 import { supabase } from "@/lib/db/supabase-service";
 
-const PROMPT_PATH = path.join(process.cwd(), "prompts/detect-threads.txt");
+// Read once at module load — same pattern as processArticle.ts.
+const DETECT_PROMPT = fs.readFileSync(
+  path.join(process.cwd(), "prompts/detect-threads.txt"),
+  "utf-8"
+);
 
 interface PinRow {
   id: string;
@@ -31,7 +35,7 @@ async function detectForTopic(
   newPins: PinRow[],
   recentPins: PinRow[]
 ): Promise<Array<{ pinIdA: string; pinIdB: string; confidence: number }>> {
-  const prompt = fs.readFileSync(PROMPT_PATH, "utf-8")
+  const prompt = DETECT_PROMPT
     .replace(
       "{{newArticles}}",
       newPins
@@ -71,8 +75,9 @@ async function detectForTopic(
 }
 
 // Compares newly stored pins against the past 5 days of history to find
-// story continuations. Runs one LLM call per topic. Safe to call even if it
-// fails — the pipeline marks success regardless of thread detection outcome.
+// story continuations. Runs one LLM call per topic in parallel so total
+// time is bounded by the slowest single topic, not the sum of all topics.
+// Safe to call even if it fails — the pipeline marks success before this runs.
 export async function detectThreads(runId: string): Promise<number> {
   // Newly stored pins from this run (need summaries to compare meaningfully)
   const { data: newPins, error: newErr } = await supabase
@@ -102,18 +107,28 @@ export async function detectThreads(runId: string): Promise<number> {
   }
 
   const topics = [...new Set((newPins as PinRow[]).map((p) => p.topic ?? "other"))];
+
+  // Run all topics in parallel — total time is the slowest single LLM call,
+  // not the sum of all calls. Failures per topic are caught individually.
+  const perTopicResults = await Promise.allSettled(
+    topics.map(async (topic) => {
+      const topicNew = (newPins as PinRow[]).filter((p) => (p.topic ?? "other") === topic).slice(0, 20);
+      const topicRecent = (recentPins as PinRow[]).filter((p) => (p.topic ?? "other") === topic).slice(0, 25);
+
+      if (topicNew.length === 0 || topicRecent.length === 0) return [];
+
+      console.log(`[detectThreads] ${topic}: ${topicNew.length} new vs ${topicRecent.length} recent`);
+      return detectForTopic(topic, topicNew, topicRecent);
+    })
+  );
+
   const allPairs: Array<{ pinIdA: string; pinIdB: string; confidence: number }> = [];
-
-  for (const topic of topics) {
-    const topicNew = (newPins as PinRow[]).filter((p) => (p.topic ?? "other") === topic).slice(0, 20);
-    const topicRecent = (recentPins as PinRow[]).filter((p) => (p.topic ?? "other") === topic).slice(0, 25);
-
-    if (topicNew.length === 0 || topicRecent.length === 0) continue;
-
-    console.log(`[detectThreads] ${topic}: ${topicNew.length} new vs ${topicRecent.length} recent`);
-
-    const pairs = await detectForTopic(topic, topicNew, topicRecent);
-    allPairs.push(...pairs);
+  for (const result of perTopicResults) {
+    if (result.status === "fulfilled") {
+      allPairs.push(...result.value);
+    } else {
+      console.error("[detectThreads] Topic detection failed:", result.reason);
+    }
   }
 
   if (allPairs.length === 0) {

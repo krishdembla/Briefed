@@ -3,7 +3,11 @@ import path from "path";
 import { callLLM } from "./client";
 import type { RawArticle } from "@/types/pipeline";
 
-const PROMPT_PATH = path.join(process.cwd(), "prompts/cluster-events.txt");
+// Read once at module load — avoids a disk read per chunk call.
+const CLUSTER_PROMPT = fs.readFileSync(
+  path.join(process.cwd(), "prompts/cluster-events.txt"),
+  "utf-8"
+);
 
 // Articles scoring below this are dropped.
 // Set to 4 so niche-but-significant stories (tech breakthroughs, health alerts from
@@ -32,7 +36,7 @@ async function clusterChunk(chunk: RawArticle[]): Promise<RawArticle[]> {
     .map((a, i) => `[${i}] "${a.headline}" | ${a.sourceName} | ${a.body.slice(0, 150).replace(/\n/g, " ")}`)
     .join("\n");
 
-  const prompt = fs.readFileSync(PROMPT_PATH, "utf-8").replace("{{articles}}", articleList);
+  const prompt = CLUSTER_PROMPT.replace("{{articles}}", articleList);
 
   try {
     const raw = await callLLM(prompt, 2048);
