@@ -7,7 +7,7 @@ import { generateDigestIntro } from "@/lib/ai/generateDigest";
 import { generateUnsubscribeToken } from "@/app/api/unsubscribe/route";
 import BriefedDigest from "@/emails/BriefedDigest";
 import { sendAlertEmail } from "@/lib/email/alerts";
-import { selectDigestPins, buildSubject, type DigestPin } from "@/lib/digestUtils";
+import { selectDigestPins, buildSubject } from "@/lib/digestUtils";
 
 // One LLM call per user + Resend sends — 60s is ample, but set explicitly to
 // avoid being caught by Vercel's default 10s limit on non-cron invocations.
@@ -29,20 +29,72 @@ async function handle(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ── Fetch today's pins (last 24h) ─────────────────────────────────────────
-  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  // ── Create audit record ───────────────────────────────────────────────────
+  let runId: string | null = null;
+  try {
+    const { data: run } = await supabase
+      .from("digest_runs")
+      .insert({ status: "running" })
+      .select("id")
+      .single();
+    runId = run?.id ?? null;
+  } catch {
+    // Non-fatal — tracking must never block the actual send.
+  }
+
+  async function finishDigestRun(
+    status: "success" | "error" | "skipped",
+    counts: {
+      emailsSent?: number;
+      emailsFailed?: number;
+      pinsFound?: number;
+      usersFound?: number;
+      errorMsg?: string;
+    }
+  ): Promise<void> {
+    if (!runId) return;
+    try {
+      await supabase
+        .from("digest_runs")
+        .update({
+          status,
+          finished_at: new Date().toISOString(),
+          emails_sent:   counts.emailsSent   ?? 0,
+          emails_failed: counts.emailsFailed ?? 0,
+          pins_found:    counts.pinsFound    ?? 0,
+          users_found:   counts.usersFound   ?? 0,
+          error_msg:     counts.errorMsg     ?? null,
+        })
+        .eq("id", runId);
+    } catch {
+      // Non-fatal.
+    }
+  }
+
+  // ── Fetch today's pins (last 36h) ─────────────────────────────────────────
+  // Use created_at (DB insertion time) rather than published_at (news source's
+  // article date) — the latter can be 30-48h old from NewsAPI "everything"
+  // queries, which would cause the digest to find 0 pins and silently skip.
+  // 36h window (not 24h) because the pipeline runs at 5am UTC and the digest
+  // runs at 7am UTC — yesterday's pins are already 26h old by send time.
+  const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
 
   const { data: allPins, error: pinsError } = await supabase
     .from("pins")
     .select("headline, topic, region_label")
     .eq("ai_processed", true)
     .not("lat", "is", null)
-    .gte("published_at", since)
-    .order("published_at", { ascending: false })
-    .limit(50); // fetch enough to cover all topic combinations
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(50);
 
   if (pinsError || !allPins || allPins.length === 0) {
-    console.error("[send-digest] No pins found:", pinsError?.message);
+    const msg = pinsError?.message ?? "0 pins with created_at in last 36h";
+    console.error("[send-digest] No pins found:", msg);
+    await Promise.all([
+      finishDigestRun("error", { errorMsg: `No pins: ${msg}` }),
+      sendAlertEmail("Digest skipped — no pins", `No AI-processed, geo-tagged pins were found in the last 36 hours.\n\nDB error: ${msg}`),
+    ]);
     return NextResponse.json({ error: "No pins available" }, { status: 422 });
   }
 
@@ -50,7 +102,12 @@ async function handle(request: NextRequest): Promise<NextResponse> {
   const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
 
   if (usersError || !usersData?.users?.length) {
-    console.error("[send-digest] No users found:", usersError?.message);
+    const msg = usersError?.message ?? "listUsers returned empty";
+    console.error("[send-digest] No users found:", msg);
+    await Promise.all([
+      finishDigestRun("error", { pinsFound: allPins.length, errorMsg: `No users: ${msg}` }),
+      sendAlertEmail("Digest skipped — no users", `Could not load user list from Supabase Auth.\n\nError: ${msg}`),
+    ]);
     return NextResponse.json({ error: "No users to send to" }, { status: 422 });
   }
 
@@ -99,11 +156,9 @@ async function handle(request: NextRequest): Promise<NextResponse> {
 
   for (const { email, userId } of recipients) {
     try {
-      // Skip users who have unsubscribed or whose frequency doesn't match today
       if (skipIds.has(userId)) continue;
 
       const userTopics = prefsByUserId.get(userId) ?? [];
-
       const digestPins = selectDigestPins(allPins, userTopics);
 
       if (digestPins.length === 0) {
@@ -152,7 +207,35 @@ async function handle(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  console.log(`[send-digest] Sent: ${sent}, Failed: ${failures.length}`);
+  const testOverrideActive = !!process.env.TEST_EMAIL_OVERRIDE;
+  console.log(`[send-digest] Sent: ${sent}, Failed: ${failures.length}, TEST_OVERRIDE: ${testOverrideActive}`);
+
+  // ── Determine final status ────────────────────────────────────────────────
+  const finalStatus =
+    sent > 0 ? "success" :
+    failures.length > 0 ? "error" :
+    "skipped";
+
+  const errorMsg = failures.length > 0
+    ? `Failed addresses: ${failures.join(", ")}`
+    : sent === 0
+    ? `All recipients skipped (frequency/unsubscribe). TEST_OVERRIDE: ${testOverrideActive}`
+    : undefined;
+
+  await finishDigestRun(finalStatus, {
+    emailsSent:   sent,
+    emailsFailed: failures.length,
+    pinsFound:    allPins.length,
+    usersFound:   usersData.users.length,
+    errorMsg,
+  });
+
+  if (finalStatus === "skipped") {
+    await sendAlertEmail(
+      "Digest sent 0 emails",
+      `The digest cron ran but sent nothing and had no failures.\n\nPossible causes:\n- All users were skipped (unsubscribed or frequency mismatch)\n- digest_pins was empty for every user\n- TEST_EMAIL_OVERRIDE active: ${testOverrideActive}\n\nUsers found: ${usersData.users.length}, Pins found: ${allPins.length}`
+    );
+  }
 
   if (failures.length > 0) {
     await sendAlertEmail(
@@ -161,7 +244,7 @@ async function handle(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  return NextResponse.json({ sent, failures });
+  return NextResponse.json({ sent, failures, pinsFound: allPins.length, usersFound: usersData.users.length });
 }
 
 export const GET = handle;

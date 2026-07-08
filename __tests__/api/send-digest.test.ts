@@ -30,6 +30,18 @@ vi.mock("@/lib/db/supabase-service", () => ({
           limit: mockPinsOrder,
         };
       }
+      if (table === "digest_runs") {
+        return {
+          insert: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: { id: "test-run-id" }, error: null }),
+            }),
+          }),
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        };
+      }
       // user_preferences table
       return { select: mockPrefsSelect };
     }),
