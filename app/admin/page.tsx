@@ -95,6 +95,7 @@ export default async function AdminPage() {
 
   const today = new Date().toISOString().slice(0, 10);
   // Use created_at for the 24h pin count so it matches the digest query window.
+  // eslint-disable-next-line react-hooks/purity
   const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
   // Parallel data fetch
