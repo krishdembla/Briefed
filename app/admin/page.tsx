@@ -18,6 +18,18 @@ type PipelineRun = {
   pins_ai_done: number;
 };
 
+type DigestRun = {
+  id: string;
+  started_at: string;
+  finished_at: string | null;
+  status: "running" | "success" | "error" | "skipped";
+  emails_sent: number;
+  emails_failed: number;
+  pins_found: number;
+  users_found: number;
+  error_msg: string | null;
+};
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function duration(start: string, end: string | null): string {
@@ -37,6 +49,14 @@ function formatTime(iso: string): string {
   });
 }
 
+function formatDay(isoDate: string, todayStr: string): string {
+  if (isoDate === todayStr) return "Today";
+  const yesterday = new Date();
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  if (isoDate === yesterday.toISOString().slice(0, 10)) return "Yesterday";
+  return new Date(isoDate).toLocaleString("en-GB", { month: "short", day: "numeric" });
+}
+
 const TOPIC_COLORS_ADMIN: Record<string, string> = {
   politics: "#3b82f6", economy: "#22c55e", conflict: "#ef4444",
   health: "#ec4899", climate: "#14b8a6", tech: "#a855f7", other: "#94a3b8",
@@ -52,6 +72,15 @@ const STATUS_STYLES: Record<string, string> = {
   running: "bg-yellow-500/15 text-yellow-400",
 };
 
+const DIGEST_STATUS_STYLES: Record<string, string> = {
+  success: "bg-emerald-500/15 text-emerald-400",
+  error:   "bg-red-500/15 text-red-400",
+  skipped: "bg-amber-500/15 text-amber-400",
+  running: "bg-yellow-500/15 text-yellow-400",
+  missed:  "bg-zinc-700/40 text-zinc-500",
+  pending: "bg-indigo-500/15 text-indigo-400",
+};
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AdminPage() {
@@ -65,11 +94,11 @@ export default async function AdminPage() {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  // eslint-disable-next-line react-hooks/purity
+  // Use created_at for the 24h pin count so it matches the digest query window.
   const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
   // Parallel data fetch
-  const [runsResult, checkinsResult, usersResult, prefsResult, recentPinsResult, threadCountResult] = await Promise.all([
+  const [runsResult, checkinsResult, usersResult, prefsResult, recentPinsResult, threadCountResult, digestRunsResult] = await Promise.all([
     adminSupabase
       .from("pipeline_runs")
       .select("*")
@@ -90,11 +119,17 @@ export default async function AdminPage() {
     adminSupabase
       .from("pins")
       .select("topic, region_label")
-      .gte("published_at", since24h),
+      .gte("created_at", since24h),
 
     adminSupabase
       .from("pin_relations")
       .select("*", { count: "exact", head: true }),
+
+    adminSupabase
+      .from("digest_runs")
+      .select("*")
+      .order("started_at", { ascending: false })
+      .limit(20),
   ]);
 
   const runs: PipelineRun[] = runsResult.data ?? [];
@@ -102,6 +137,7 @@ export default async function AdminPage() {
   const totalUsers = usersResult.data?.users?.length ?? 0;
   const onboardedUsers = prefsResult.count ?? 0;
   const threadCount = threadCountResult.count ?? 0;
+  const digestRuns: DigestRun[] = (digestRunsResult.data ?? []) as DigestRun[];
 
   // Compute topic + region distributions from last 24h pins
   const recentPins = recentPinsResult.data ?? [];
@@ -129,6 +165,32 @@ export default async function AdminPage() {
     ? Math.round((runs.filter((r) => r.status === "success").length / runs.length) * 100)
     : 0;
 
+  // ── Compute per-day digest status for the last 15 days ───────────────────
+  // Index digest runs by UTC calendar day (take earliest run per day).
+  const digestRunsByDay = new Map<string, DigestRun>();
+  for (const run of digestRuns) {
+    const day = run.started_at.slice(0, 10);
+    if (!digestRunsByDay.has(day)) digestRunsByDay.set(day, run);
+  }
+
+  // Digest cron fires at 7am UTC; before that it's "pending" for today.
+  const currentUTCHour = new Date().getUTCHours();
+  const pastCronTime = currentUTCHour >= 7;
+
+  const digestDays = Array.from({ length: 15 }, (_, i) => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - i);
+    const day = d.toISOString().slice(0, 10);
+    const run = digestRunsByDay.get(day) ?? null;
+    const isToday = day === today;
+    // "pending" = today, cron hasn't fired yet; "missed" = cron should have run but didn't
+    const displayStatus: string =
+      run ? run.status :
+      isToday && !pastCronTime ? "pending" :
+      "missed";
+    return { day, run, displayStatus };
+  });
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <div className="max-w-4xl mx-auto px-6 py-10">
@@ -153,7 +215,7 @@ export default async function AdminPage() {
           <StatCard label="Regions" value={regionBars.length} note="last 24h" />
         </div>
 
-        {/* Last run summary */}
+        {/* Last pipeline run summary */}
         {lastRun && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-6">
             <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Last pipeline run</p>
@@ -228,28 +290,60 @@ export default async function AdminPage() {
           </div>
         )}
 
-        {/* Pipeline run history */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-800">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Pipeline history</p>
+        {/* Run histories — pipeline left, digest right */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+          {/* Pipeline run history */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-zinc-800">
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Pipeline history</p>
+            </div>
+            <div className="divide-y divide-zinc-800">
+              {runs.length === 0 && (
+                <p className="px-5 py-4 text-sm text-zinc-600">No runs yet.</p>
+              )}
+              {runs.map((run) => (
+                <div key={run.id} className="px-5 py-3 flex items-center gap-4 text-sm">
+                  <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[run.status]}`}>
+                    {run.status}
+                  </span>
+                  <span className="text-zinc-300 min-w-0 text-xs">{formatTime(run.started_at)}</span>
+                  <span className="text-zinc-600 text-xs">{duration(run.started_at, run.finished_at)}</span>
+                  <span className="text-zinc-600 text-xs ml-auto shrink-0">
+                    {run.pins_stored} stored
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="divide-y divide-zinc-800">
-            {runs.length === 0 && (
-              <p className="px-5 py-4 text-sm text-zinc-600">No runs yet.</p>
-            )}
-            {runs.map((run) => (
-              <div key={run.id} className="px-5 py-3 flex items-center gap-4 text-sm">
-                <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[run.status]}`}>
-                  {run.status}
-                </span>
-                <span className="text-zinc-300 min-w-0">{formatTime(run.started_at)}</span>
-                <span className="text-zinc-600 text-xs">{duration(run.started_at, run.finished_at)}</span>
-                <span className="text-zinc-600 text-xs ml-auto">
-                  {run.pins_stored} stored · {run.pins_ai_done} AI
-                </span>
-              </div>
-            ))}
+
+          {/* Digest run history — one row per day for last 15 days */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-zinc-800">
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Digest history</p>
+            </div>
+            <div className="divide-y divide-zinc-800">
+              {digestDays.map(({ day, run, displayStatus }) => (
+                <div key={day} className="px-5 py-3 flex items-center gap-3 text-sm">
+                  <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${DIGEST_STATUS_STYLES[displayStatus] ?? ""}`}>
+                    {displayStatus}
+                  </span>
+                  <span className="text-zinc-300 text-xs min-w-0">
+                    {formatDay(day, today)}
+                  </span>
+                  {run ? (
+                    <span className="text-zinc-600 text-xs ml-auto shrink-0">
+                      {run.emails_sent} sent
+                      {run.emails_failed > 0 ? ` · ${run.emails_failed} failed` : ""}
+                    </span>
+                  ) : (
+                    <span className="text-zinc-700 text-xs ml-auto shrink-0">—</span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
+
         </div>
 
       </div>
