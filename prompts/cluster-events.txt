@@ -17,8 +17,8 @@ TECH ARTICLES — score 5 or higher automatically if any of these apply:
   • Regulatory decision affecting the tech sector (antitrust, AI law, data privacy)
   • Semiconductor, quantum, or space technology breakthrough
   • M&A or funding deal above $500M that signals an industry shift
-  • Open-source project with large community adoption
-Score 3 or lower for: routine app updates, minor product refreshes, speculative rumours, lifestyle tech.
+  • Open-source project with very large, established community adoption (millions of users or downloads — not a new or niche project)
+Score 3 or lower for: routine app updates, minor product refreshes, speculative rumours, lifestyle tech, library or package releases (PyPI, npm, RubyGems, etc.), minor CLI tool releases or version bumps, niche developer tooling aimed at narrow audiences, any story whose primary audience is software developers rather than the general public.
 
 HEALTH ARTICLES — score 5 or higher automatically if any of these apply:
   • WHO alert, declaration, or official guidance update
