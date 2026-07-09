@@ -121,6 +121,23 @@ const RSS_FEEDS: { url: string; sourceName: string }[] = [
   { url: "https://www.theeastafrican.co.ke/tea/rss", sourceName: "The East African" },
   // Latin America — additional
   { url: "https://agenciabrasil.ebc.com.br/en/rss/ultimasnoticias/feed.rss", sourceName: "Agência Brasil" },
+  { url: "https://mexiconewsdaily.com/feed", sourceName: "Mexico News Daily" },
+  // Country-specific national sources (filling gaps in existing coverage)
+  { url: "https://www3.nhk.or.jp/nhkworld/upld/feeds/en/news_en.xml", sourceName: "NHK World" },
+  { url: "https://www.abc.net.au/news/feed/2942460/rss.xml", sourceName: "ABC Australia" },
+  { url: "https://www.cbc.ca/webfeed/rss/rss-world", sourceName: "CBC Canada" },
+  { url: "https://www.thehindu.com/feeder/default.rss", sourceName: "The Hindu" },
+  { url: "https://www.koreaherald.com/rss/newsAll", sourceName: "Korea Herald" },
+  { url: "https://www.spiegel.de/international/index.rss", sourceName: "Der Spiegel International" },
+  { url: "https://www.trtworld.com/news/rss", sourceName: "TRT World (state media)" },
+  { url: "https://rss.thejakartapost.com/home", sourceName: "Jakarta Post" },
+  { url: "https://www.themoscowtimes.com/rss/news", sourceName: "The Moscow Times" },
+  { url: "https://batimes.com.ar/feed", sourceName: "Buenos Aires Times" },
+  // Finance / markets supplements (Finnhub covers API-based market data; these add editorial finance news)
+  { url: "https://www.cnbc.com/id/15838459/device/rss/rss.html", sourceName: "CNBC Markets" },
+  { url: "https://feeds.reuters.com/reuters/marketsNews", sourceName: "Reuters Markets" },
+  { url: "https://feeds.reuters.com/reuters/businessNews", sourceName: "Reuters Business" },
+  { url: "https://www.investing.com/rss/news.rss", sourceName: "Investing.com" },
 ];
 
 // Parses all RSS feeds concurrently. A single failed feed is logged and skipped

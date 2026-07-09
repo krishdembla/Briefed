@@ -88,5 +88,15 @@ export async function clusterByEvent(articles: RawArticle[]): Promise<RawArticle
   }
 
   console.log(`[clusterByEvent] Total: ${articles.length} → ${allKept.length} after clustering + importance filter`);
+
+  // Cross-chunk duplicate pass: articles covering the same event may have survived
+  // in separate chunks. Run one final cluster call on the merged kept set to catch them.
+  // The kept set is always small enough to fit in a single chunk.
+  if (allKept.length > 1) {
+    const deduped = await clusterChunk(allKept);
+    console.log(`[clusterByEvent] Cross-chunk dedup: ${allKept.length} → ${deduped.length}`);
+    return deduped;
+  }
+
   return allKept;
 }
