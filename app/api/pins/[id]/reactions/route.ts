@@ -64,7 +64,7 @@ export async function GET(
 }
 
 // POST /api/pins/:id/reactions
-// Body: { reaction: "fire" | "complex" | "useful" }
+// Body: { reaction: "like" }
 // Toggles the reaction — inserts if not present, deletes if already set.
 export async function POST(
   request: NextRequest,
