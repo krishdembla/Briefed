@@ -38,6 +38,12 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+function readTime(summary: string | null): string | null {
+  if (!summary) return null;
+  const words = summary.trim().split(/\s+/).length;
+  return `${Math.max(1, Math.round(words / 200))} min read`;
+}
+
 interface ReactionCounts {
   like: number;
 }
@@ -49,6 +55,7 @@ export default function FeedDetail({
   const topicColor = TOPIC_COLORS[pin.topic ?? "other"] ?? TOPIC_COLORS.other;
   const topicLabel = TOPIC_LABELS[pin.topic ?? "other"] ?? "Other";
   const stats = [pin.stat_1, pin.stat_2, pin.stat_3].filter(Boolean) as string[];
+  const mins = readTime(pin.summary);
   const [showPicker, setShowPicker] = useState(false);
   const [threadPins, setThreadPins] = useState<MapPin[]>([]);
   const [copied, setCopied] = useState(false);
@@ -126,73 +133,94 @@ export default function FeedDetail({
 
   return (
     <div
-      className="flex flex-col h-full bg-white relative"
+      className="flex flex-col h-full bg-paper-raised relative"
       onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
       onTouchEnd={(e) => {
         if (e.changedTouches[0].clientX - touchStartX.current > 60) onBack();
       }}
     >
       {/* Back bar */}
-      <div
-        className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-zinc-200 bg-white/80 backdrop-blur-md"
-        style={{ borderBottomColor: topicColor + "40" }}
-      >
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-rule bg-paper-raised/90 backdrop-blur-md">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+          className="flex items-center gap-1.5 text-sm font-medium text-ink-soft hover:text-ink transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Back
         </button>
-        <div className="h-4 w-px bg-zinc-200" />
+        <div className="h-4 w-px bg-rule" />
         <span
-          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0"
-          style={{ backgroundColor: topicColor + "1f", color: topicColor }}
+          className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] shrink-0"
+          style={{ color: topicColor }}
         >
+          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: topicColor }} />
           {topicLabel}
         </span>
         {pin.region_label && (
-          <span className="text-xs text-zinc-500 truncate">{pin.region_label}</span>
+          <span className="text-xs text-ink-faint truncate">{pin.region_label}</span>
         )}
-        <span className="text-xs text-zinc-400 ml-auto shrink-0">{timeAgo(pin.published_at)}</span>
+        <span className="text-xs text-ink-faint ml-auto shrink-0 tnum">{timeAgo(pin.published_at)}</span>
       </div>
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-5 py-5">
-        <h2 className="text-zinc-900 font-bold text-lg leading-snug mb-3">
+        <h2 className="font-serif text-ink text-[26px] sm:text-3xl leading-[1.15] mb-3">
           {pin.headline}
         </h2>
 
-        {pin.summary && (
-          <p className="text-zinc-600 text-sm leading-relaxed mb-4">{pin.summary}</p>
+        {/* Standfirst — an italic serif dek, the way a newspaper leads. No label,
+            no tinted box: reads editorial rather than machine-generated. */}
+        {pin.why_it_matters && (
+          <p className="font-serif italic text-lg leading-snug text-ink-soft mb-4">
+            {pin.why_it_matters}
+          </p>
         )}
 
-        {/* Direction B: Why it matters callout */}
-        {pin.why_it_matters && (
-          <div
-            className="rounded-xl px-3.5 py-3 mb-4 text-sm leading-snug"
-            style={{ backgroundColor: topicColor + "12", borderLeft: `3px solid ${topicColor}` }}
-          >
-            <span
-              className="text-[10px] font-bold uppercase tracking-wider block mb-1"
-              style={{ color: topicColor }}
-            >
-              Why it matters
-            </span>
-            <p className="text-zinc-700">{pin.why_it_matters}</p>
+        {/* Dateline */}
+        <div className="flex items-center gap-2 text-[11px] text-ink-faint uppercase tracking-[0.12em] pb-4 mb-5 border-b border-rule">
+          {pin.region_label && <span>{pin.region_label}</span>}
+          {pin.region_label && <span>·</span>}
+          <span className="tnum normal-case tracking-normal">{timeAgo(pin.published_at)}</span>
+          {mins && <><span>·</span><span className="tnum normal-case tracking-normal">{mins}</span></>}
+        </div>
+
+        {/* The brief — the full summary, set as editorial body with a drop cap.
+            This is the first place the reader sees the summary (the feed card no
+            longer leaks it), so opening a story now delivers genuinely new copy. */}
+        {pin.summary && (
+          <p className="text-ink text-[15px] leading-[1.7] mb-5 first-letter:float-left first-letter:font-serif first-letter:text-5xl first-letter:leading-[0.82] first-letter:pr-2 first-letter:pt-0.5 first-letter:text-ink">
+            {pin.summary}
+          </p>
+        )}
+
+        {/* Key facts — the stats promoted from tiny chips to a proper block. */}
+        {stats.length > 0 && (
+          <div className="mb-5 border border-rule rounded-lg overflow-hidden">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-ink-faint px-4 pt-3 pb-1">
+              Key facts
+            </p>
+            <div className="divide-y divide-rule">
+              {stats.map((stat, i) => (
+                <div key={i} className="flex items-start gap-3 px-4 py-2.5">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: topicColor }} />
+                  <span className="text-sm text-ink leading-snug tnum">{stat}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {stats.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {stats.map((stat, i) => (
+        {/* Topic tags — fine-grained labels when available */}
+        {pin.tags && pin.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-5">
+            {pin.tags.map((tag) => (
               <span
-                key={i}
-                className="text-xs font-medium px-3 py-1.5 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700"
+                key={tag}
+                className="text-[11px] text-ink-soft bg-paper-sunken border border-rule rounded-full px-2.5 py-0.5"
               >
-                {stat}
+                {tag}
               </span>
             ))}
           </div>
@@ -204,10 +232,10 @@ export default function FeedDetail({
             onClick={handleLike}
             disabled={!userId}
             title={userReaction === "like" ? "Unlike" : "Like this story"}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all tnum ${
               userReaction === "like"
-                ? "border-rose-300 bg-rose-50 text-rose-600"
-                : "border-zinc-200 bg-zinc-50 text-zinc-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500 disabled:cursor-default"
+                ? "border-accent/40 bg-accent/10 text-accent"
+                : "border-rule bg-paper text-ink-faint hover:border-accent/30 hover:bg-accent/5 hover:text-accent disabled:cursor-default"
             }`}
           >
             <svg
@@ -222,26 +250,26 @@ export default function FeedDetail({
             {reactionCounts.like > 0 && <span>{reactionCounts.like}</span>}
           </button>
           {readCount > 1 && (
-            <span className="ml-auto text-[11px] text-zinc-400">
+            <span className="ml-auto text-[11px] text-ink-faint tnum">
               {readCount.toLocaleString()} readers
             </span>
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 py-4 border-t border-zinc-100">
+        <div className="flex items-center justify-between gap-3 py-4 border-t border-rule">
           <div className="flex items-center gap-3 min-w-0">
             <a
               href={pin.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-zinc-500 hover:text-indigo-600 underline underline-offset-2 transition-colors truncate"
+              className="text-xs text-ink-soft hover:text-accent underline underline-offset-2 transition-colors truncate"
             >
               {pin.source_name}
             </a>
             {userId && (
               <button
                 onClick={() => { onBack(); onNotInterested(pin.id); }}
-                className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors shrink-0"
+                className="text-xs text-ink-faint hover:text-ink transition-colors shrink-0"
               >
                 Not interested
               </button>
@@ -252,7 +280,7 @@ export default function FeedDetail({
             <button
               onClick={handleShare}
               title="Share"
-              className="w-8 h-8 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all"
+              className="w-8 h-8 flex items-center justify-center rounded-full text-ink-faint hover:text-ink hover:bg-paper-sunken transition-all"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -263,13 +291,13 @@ export default function FeedDetail({
             {showShareMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)} />
-                <div className="absolute right-0 top-full mt-2 z-20 bg-white border border-zinc-200 rounded-xl shadow-lg py-1.5 w-44">
+                <div className="absolute right-0 top-full mt-2 z-20 bg-paper-raised border border-rule rounded-lg shadow-lg py-1.5 w-44">
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(`${pin.headline} ${pinUrl(pin.id)}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => setShowShareMenu(false)}
-                    className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                    className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-ink-soft hover:bg-paper-sunken transition-colors"
                   >
                     WhatsApp
                   </a>
@@ -278,7 +306,7 @@ export default function FeedDetail({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => setShowShareMenu(false)}
-                    className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                    className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-ink-soft hover:bg-paper-sunken transition-colors"
                   >
                     Telegram
                   </a>
@@ -289,7 +317,7 @@ export default function FeedDetail({
                       setShowShareMenu(false);
                       setTimeout(() => setCopied(false), 2000);
                     }}
-                    className="w-full text-left flex items-center gap-2.5 px-3.5 py-2 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                    className="w-full text-left flex items-center gap-2.5 px-3.5 py-2 text-sm text-ink-soft hover:bg-paper-sunken transition-colors"
                   >
                     {copied ? "Copied!" : "Copy link"}
                   </button>
@@ -304,8 +332,8 @@ export default function FeedDetail({
                 title={isSaved ? "Saved" : "Save to collection"}
                 className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${
                   isSaved
-                    ? "text-indigo-600 bg-indigo-50"
-                    : "text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50"
+                    ? "text-accent bg-accent/10"
+                    : "text-ink-faint hover:text-accent hover:bg-accent/10"
                 }`}
               >
                 <svg
@@ -325,10 +353,10 @@ export default function FeedDetail({
             )}
             <button
               onClick={() => !isRead && onRead(pin.id)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                 isRead
-                  ? "bg-zinc-100 text-zinc-400 cursor-default"
-                  : "bg-zinc-900 text-white hover:bg-zinc-700 active:scale-[0.97]"
+                  ? "bg-paper-sunken text-ink-faint cursor-default"
+                  : "bg-accent text-white hover:bg-accent-hover active:scale-[0.98]"
               }`}
             >
               {isRead ? "Read ✓" : "Mark as read"}
@@ -337,8 +365,8 @@ export default function FeedDetail({
         </div>
 
         {threadPins.length > 0 && (
-          <div className="mt-2 pt-4 border-t border-zinc-100">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+          <div className="mt-2 pt-4 border-t border-rule">
+            <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em] mb-3">
               Story updates
             </p>
             <div className="flex flex-col gap-1.5">
@@ -348,17 +376,17 @@ export default function FeedDetail({
                   <button
                     key={thread.id}
                     onClick={() => onSelectRelated(thread)}
-                    className="flex items-start gap-2.5 text-left group w-full rounded-xl px-2.5 py-2.5 hover:bg-zinc-50 border border-transparent hover:border-zinc-200 transition-all"
+                    className="flex items-start gap-2.5 text-left group w-full rounded-md px-2.5 py-2.5 hover:bg-paper-sunken border border-transparent hover:border-rule transition-all"
                   >
                     <span
                       className="mt-1.5 w-2 h-2 rounded-full shrink-0"
                       style={{ backgroundColor: threadColor }}
                     />
                     <div className="min-w-0">
-                      <p className="text-sm text-zinc-800 group-hover:text-zinc-900 leading-snug line-clamp-2 transition-colors">
+                      <p className="font-serif text-[15px] text-ink group-hover:text-accent leading-snug line-clamp-2 transition-colors">
                         {thread.headline}
                       </p>
-                      <p className="text-[10px] text-zinc-400 mt-0.5">
+                      <p className="text-[10px] text-ink-faint mt-0.5 tnum">
                         {thread.region_label && `${thread.region_label} · `}
                         {timeAgo(thread.published_at)}
                       </p>
@@ -371,8 +399,8 @@ export default function FeedDetail({
         )}
 
         {relatedPins.length > 0 && (
-          <div className="mt-2 pt-4 border-t border-zinc-100">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+          <div className="mt-2 pt-4 border-t border-rule">
+            <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em] mb-3">
               More on {topicLabel}
             </p>
             <div className="flex flex-col gap-1.5">
@@ -380,18 +408,18 @@ export default function FeedDetail({
                 <button
                   key={related.id}
                   onClick={() => onSelectRelated(related)}
-                  className="flex items-start gap-2.5 text-left group w-full rounded-xl px-2.5 py-2.5 hover:bg-zinc-50 border border-transparent hover:border-zinc-200 transition-all"
+                  className="flex items-start gap-2.5 text-left group w-full rounded-md px-2.5 py-2.5 hover:bg-paper-sunken border border-transparent hover:border-rule transition-all"
                 >
                   <span
                     className="mt-1.5 w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: topicColor }}
                   />
                   <div className="min-w-0">
-                    <p className="text-sm text-zinc-800 group-hover:text-zinc-900 leading-snug line-clamp-2 transition-colors">
+                    <p className="font-serif text-[15px] text-ink group-hover:text-accent leading-snug line-clamp-2 transition-colors">
                       {related.headline}
                     </p>
                     {related.region_label && (
-                      <p className="text-xs text-zinc-500 mt-0.5">{related.region_label}</p>
+                      <p className="text-xs text-ink-faint mt-0.5">{related.region_label}</p>
                     )}
                   </div>
                 </button>

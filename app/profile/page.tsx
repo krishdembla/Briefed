@@ -206,65 +206,68 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="w-5 h-5 rounded-full border-2 border-zinc-700 border-t-white animate-spin" />
+      <div className="min-h-screen bg-paper flex items-center justify-center">
+        <div className="w-5 h-5 rounded-full border-2 border-rule border-t-accent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+    <div className="min-h-screen bg-paper text-ink font-sans" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
       {/* Nav */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-900">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-rule">
         <button
           onClick={() => router.push("/map")}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-paper-raised border border-rule text-ink-soft hover:text-ink hover:border-rule-strong transition-colors"
           aria-label="Back to map"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-sm font-semibold">Profile</h1>
+        <h1 className="font-serif text-xl">Profile</h1>
       </div>
 
-      <div className="max-w-md mx-auto px-5 py-6 space-y-6">
-        {/* Identity */}
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-lg font-bold text-white shrink-0">
-            {initial}
+      <div className="max-w-5xl mx-auto px-5 sm:px-6">
+        {/* Identity + stats masthead — spans the full width */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 py-7 border-b border-rule">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-accent flex items-center justify-center text-xl font-semibold font-serif text-white shrink-0">
+              {initial}
+            </div>
+            <div className="min-w-0">
+              <p className="text-ink font-serif text-xl truncate">{email}</p>
+              <p className="text-ink-faint text-xs mt-0.5">Briefed member</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-white font-semibold text-sm truncate">{email}</p>
-            <p className="text-zinc-500 text-xs mt-0.5">Briefed member</p>
+
+          {/* Big serif stat figures, hairline-separated */}
+          <div className="flex items-stretch">
+            <div className="text-center px-5 sm:px-6">
+              <p className="font-serif text-4xl sm:text-5xl tnum leading-none" style={{ color: "#a9762f" }}>{stats.streak}</p>
+              <p className="text-ink-faint text-[10px] uppercase tracking-[0.15em] mt-2">Day streak</p>
+            </div>
+            <div className="w-px bg-rule" />
+            <div className="text-center px-5 sm:px-6">
+              <p className="font-serif text-4xl sm:text-5xl text-ink tnum leading-none">{stats.longest}</p>
+              <p className="text-ink-faint text-[10px] uppercase tracking-[0.15em] mt-2">Best streak</p>
+            </div>
+            <div className="w-px bg-rule" />
+            <div className="text-center px-5 sm:px-6">
+              <p className="font-serif text-4xl sm:text-5xl text-ink tnum leading-none">{stats.total}</p>
+              <p className="text-ink-faint text-[10px] uppercase tracking-[0.15em] mt-2">Check-ins</p>
+            </div>
           </div>
         </div>
 
-        {/* Stat cards */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-center">
-            <p className="text-2xl font-bold text-orange-400">{stats.streak}</p>
-            <p className="text-zinc-500 text-xs mt-1">Day streak</p>
-          </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-center">
-            <p className="text-2xl font-bold text-white">{stats.longest}</p>
-            <p className="text-zinc-500 text-xs mt-1">Best streak</p>
-          </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-center">
-            <p className="text-2xl font-bold text-white">{stats.total}</p>
-            <p className="text-zinc-500 text-xs mt-1">Check-ins</p>
-          </div>
-        </div>
-
-        {/* Saved collections */}
-        {userId && <SavedSection userId={userId} />}
-
-        {/* Reading history */}
-        {userId && <ReadingHistory userId={userId} />}
+        {/* Dashboard grid — two columns on desktop, stacked on mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-7 items-start">
+        {/* Left column */}
+        <div className="space-y-6">
 
         {/* Streak calendar */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">
+        <div className="bg-paper-raised border border-rule rounded-lg p-4">
+          <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em] mb-4">
             Last 5 weeks
           </p>
           <div className="flex gap-1.5">
@@ -278,13 +281,14 @@ export default function ProfilePage() {
                     <div
                       key={day}
                       title={day}
-                      className={`w-full aspect-square rounded-md transition-all ${
+                      className={`w-full aspect-square rounded transition-all ${
                         future
-                          ? "bg-zinc-800/40"
+                          ? "bg-paper-sunken/50"
                           : complete
-                          ? "bg-orange-500"
-                          : "bg-zinc-800"
-                      } ${isToday ? "ring-1 ring-white/30" : ""}`}
+                          ? ""
+                          : "bg-paper-sunken"
+                      } ${isToday ? "ring-1 ring-accent/40" : ""}`}
+                      style={complete && !future ? { backgroundColor: "#a9762f" } : undefined}
                     />
                   );
                 })}
@@ -292,19 +296,19 @@ export default function ProfilePage() {
             ))}
           </div>
           <div className="flex items-center gap-2 mt-3">
-            <div className="w-3 h-3 rounded-sm bg-zinc-800" />
-            <span className="text-xs text-zinc-600">Missed</span>
-            <div className="w-3 h-3 rounded-sm bg-orange-500 ml-2" />
-            <span className="text-xs text-zinc-600">Complete</span>
+            <div className="w-3 h-3 rounded-sm bg-paper-sunken" />
+            <span className="text-xs text-ink-faint">Missed</span>
+            <div className="w-3 h-3 rounded-sm ml-2" style={{ backgroundColor: "#a9762f" }} />
+            <span className="text-xs text-ink-faint">Complete</span>
           </div>
         </div>
 
         {/* Topic preferences */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+        <div className="bg-paper-raised border border-rule rounded-lg p-4">
+          <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em] mb-1">
             Your topics
           </p>
-          <p className="text-xs text-zinc-600 mb-4">
+          <p className="text-xs text-ink-faint mb-4">
             These shape your morning digest and the default feed view.
           </p>
           <div className="grid grid-cols-2 gap-2 mb-4">
@@ -315,20 +319,20 @@ export default function ProfilePage() {
                 <button
                   key={topic}
                   onClick={() => toggleTopic(topic)}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-md border text-left transition-all ${
                     isSelected
-                      ? "border-transparent"
-                      : "bg-zinc-800 border-zinc-700 hover:border-zinc-500"
+                      ? "bg-paper-sunken"
+                      : "bg-paper border-rule hover:border-rule-strong"
                   }`}
-                  style={isSelected ? { backgroundColor: color + "18", borderColor: color + "60" } : {}}
+                  style={isSelected ? { borderColor: color } : {}}
                 >
                   <div
                     className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: isSelected ? color : "#52525b" }}
+                    style={{ backgroundColor: isSelected ? color : "#c8c2b6" }}
                   />
                   <span
-                    className="text-xs font-semibold"
-                    style={{ color: isSelected ? color : "#a1a1aa" }}
+                    className="text-xs font-medium"
+                    style={{ color: isSelected ? color : "var(--ink-soft)" }}
                   >
                     {TOPIC_LABELS[topic]}
                   </span>
@@ -339,20 +343,20 @@ export default function ProfilePage() {
           <button
             onClick={handleSaveTopics}
             disabled={savingTopics}
-            className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`w-full py-2.5 rounded-md text-xs font-medium transition-all ${
               topicsSaved
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                : "bg-white text-zinc-900 hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-40"
+                ? "bg-accent/10 text-accent border border-accent/30"
+                : "bg-accent text-white hover:bg-accent-hover active:scale-[0.99] disabled:opacity-40"
             }`}
           >
             {topicsSaved ? "Saved ✓" : savingTopics ? "Saving…" : "Save preferences"}
           </button>
 
-          <div className="mt-5 pt-4 border-t border-zinc-800">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+          <div className="mt-5 pt-4 border-t border-rule">
+            <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em] mb-1">
               Email digest
             </p>
-            <p className="text-xs text-zinc-600 mb-3">How often do you want your morning briefing?</p>
+            <p className="text-xs text-ink-faint mb-3">How often do you want your morning briefing?</p>
             <div className="grid grid-cols-2 gap-2">
               {(["daily", "weekdays", "weekly", "off"] as DigestFrequency[]).map((freq) => {
                 const labels: Record<DigestFrequency, string> = {
@@ -367,10 +371,10 @@ export default function ProfilePage() {
                     key={freq}
                     onClick={() => handleSaveFrequency(freq)}
                     disabled={savingFrequency}
-                    className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                    className={`py-2 px-3 rounded-md border text-xs font-medium transition-all ${
                       isActive
-                        ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-400"
-                        : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                        ? "bg-accent/10 border-accent/40 text-accent"
+                        : "bg-paper border-rule text-ink-soft hover:border-rule-strong"
                     }`}
                   >
                     {labels[freq]}
@@ -381,36 +385,46 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+        </div>{/* left column */}
+
+        {/* Right column */}
+        <div className="space-y-6">
+        {/* Saved collections */}
+        {userId && <SavedSection userId={userId} />}
+
+        {/* Reading history */}
+        {userId && <ReadingHistory userId={userId} />}
 
         {/* Shareable streak card */}
         {stats.streak > 0 && (
           <div className="space-y-3">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+            <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em]">
               Share your streak
             </p>
 
-            {/* Card preview */}
+            {/* Card preview — editorial ink card */}
             <div
               ref={shareCardRef}
-              className="rounded-2xl bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-800 p-5 flex items-center justify-between gap-4"
+              className="rounded-lg border border-rule p-6 flex items-center justify-between gap-4"
+              style={{ backgroundColor: "#1c1a17" }}
             >
               <div>
-                <div className="flex items-baseline gap-1.5 mb-1">
-                  <span className="text-4xl font-black text-orange-400">{stats.streak}</span>
-                  <span className="text-sm font-semibold text-orange-400">day{stats.streak !== 1 ? "s" : ""}</span>
+                <div className="flex items-baseline gap-2 mb-1.5">
+                  <span className="font-serif text-5xl tnum" style={{ color: "#d19a52" }}>{stats.streak}</span>
+                  <span className="text-sm font-medium" style={{ color: "#d19a52" }}>day{stats.streak !== 1 ? "s" : ""}</span>
                 </div>
-                <p className="text-white font-semibold text-sm">Reading streak</p>
-                <p className="text-zinc-500 text-xs mt-0.5">on Briefed</p>
+                <p className="text-white font-serif text-lg">Reading streak</p>
+                <p className="text-white/50 text-xs mt-0.5">on Briefed</p>
               </div>
-              <div className="text-5xl select-none">🔥</div>
+              <span className="font-serif text-3xl text-white/90">Briefed</span>
             </div>
 
             <button
               onClick={handleShare}
-              className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${
+              className={`w-full py-3 rounded-md text-sm font-medium transition-all ${
                 shared
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                  : "bg-white text-zinc-900 hover:bg-zinc-100 active:scale-[0.98]"
+                  ? "bg-accent/10 text-accent border border-accent/30"
+                  : "bg-accent text-white hover:bg-accent-hover active:scale-[0.99]"
               }`}
             >
               {shared
@@ -421,6 +435,8 @@ export default function ProfilePage() {
             </button>
           </div>
         )}
+        </div>{/* right column */}
+        </div>{/* dashboard grid */}
       </div>
     </div>
   );

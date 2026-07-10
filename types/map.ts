@@ -24,15 +24,17 @@ export interface MapPin {
 
 export type TopicFilter = PinTopic | "all" | "foryou" | "trending";
 
+// Muted, desaturated editorial palette — sophisticated ink tones rather than
+// saturated primaries. Used as small dots and subtle tints, never loud fills.
 export const TOPIC_COLORS: Record<string, string> = {
-  politics: "#3b82f6",
-  economy: "#22c55e",
-  conflict: "#ef4444",
-  health: "#ec4899",
-  climate: "#14b8a6",
-  tech: "#a855f7",
-  sports: "#f59e0b",
-  other: "#94a3b8",
+  politics: "#3e5c7e", // dusty blue
+  economy: "#4f7050",  // sage green
+  conflict: "#9e4a3c", // brick red
+  health: "#8a5670",   // muted plum
+  climate: "#3f736a",  // deep teal
+  tech: "#63558a",     // muted violet
+  sports: "#a9762f",   // ochre
+  other: "#7a756b",    // warm grey
 };
 
 export const TOPIC_LABELS: Record<string, string> = {

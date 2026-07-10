@@ -74,23 +74,23 @@ function AuthForm() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-paper flex items-center justify-center p-4 font-sans">
       <div className="w-full max-w-sm">
         {/* Brand */}
         <div className="text-center mb-8">
-          <h1 className="text-white text-3xl font-bold tracking-tight">Briefed</h1>
-          <p className="text-zinc-500 text-sm mt-1">Your daily world briefing</p>
+          <h1 className="font-serif text-4xl tracking-tight text-ink">Briefed</h1>
+          <p className="text-ink-faint text-sm mt-1.5">Your daily world briefing</p>
         </div>
 
         {/* Form card */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-          <h2 className="text-white font-semibold text-base mb-5">
+        <div className="bg-paper-raised border border-rule rounded-lg p-7 shadow-sm">
+          <h2 className="font-serif text-xl text-ink mb-6">
             {mode === "signin" ? "Sign in to your account" : mode === "signup" ? "Create an account" : "Reset your password"}
           </h2>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1.5" htmlFor="email">
+              <label className="block text-[11px] uppercase tracking-wider text-ink-faint mb-1.5" htmlFor="email">
                 Email
               </label>
               <input
@@ -99,14 +99,14 @@ function AuthForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
+                className="w-full bg-paper border border-rule rounded-md px-3 py-2.5 text-sm text-ink placeholder-ink-faint focus:outline-none focus:border-accent transition-colors"
                 placeholder="you@example.com"
               />
             </div>
 
             {mode !== "forgot" && (
               <div>
-                <label className="block text-xs text-zinc-400 mb-1.5" htmlFor="password">
+                <label className="block text-[11px] uppercase tracking-wider text-ink-faint mb-1.5" htmlFor="password">
                   Password
                 </label>
                 <input
@@ -116,14 +116,14 @@ function AuthForm() {
                   minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
+                  className="w-full bg-paper border border-rule rounded-md px-3 py-2.5 text-sm text-ink placeholder-ink-faint focus:outline-none focus:border-accent transition-colors"
                   placeholder="••••••••"
                 />
                 {mode === "signin" && (
                   <button
                     type="button"
                     onClick={() => switchMode("forgot")}
-                    className="mt-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                    className="mt-2 text-xs text-ink-faint hover:text-ink transition-colors"
                   >
                     Forgot password?
                   </button>
@@ -131,13 +131,13 @@ function AuthForm() {
               </div>
             )}
 
-            {error && <p className="text-red-400 text-xs">{error}</p>}
-            {message && <p className="text-emerald-400 text-xs">{message}</p>}
+            {error && <p className="text-[#9e4a3c] text-xs leading-relaxed">{error}</p>}
+            {message && <p className="text-accent text-xs leading-relaxed">{message}</p>}
 
             <button
               type="submit"
               disabled={loading}
-              className="mt-1 w-full py-2.5 rounded-xl bg-white text-zinc-900 text-sm font-semibold hover:bg-zinc-100 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-1 w-full py-2.5 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent-hover active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Loading…" : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset email"}
             </button>
@@ -145,11 +145,11 @@ function AuthForm() {
         </div>
 
         {/* Mode toggle */}
-        <p className="text-center text-xs text-zinc-600 mt-4">
+        <p className="text-center text-xs text-ink-faint mt-5">
           {mode === "forgot" ? "Remember it? " : mode === "signin" ? "Don't have an account? " : "Already have an account? "}
           <button
             onClick={() => switchMode(mode === "signup" ? "signin" : mode === "forgot" ? "signin" : "signup")}
-            className="text-zinc-400 hover:text-white transition-colors underline underline-offset-2"
+            className="text-accent hover:text-accent-hover transition-colors underline underline-offset-2"
           >
             {mode === "forgot" ? "Sign in" : mode === "signin" ? "Sign up" : "Sign in"}
           </button>

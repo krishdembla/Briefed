@@ -31,24 +31,24 @@ export default function ReadingHistory({ userId }: ReadingHistoryProps) {
   const visible = expanded ? entries : entries.slice(0, 5);
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+    <div className="bg-paper-raised border border-rule rounded-lg p-4">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+        <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em]">
           Reading history
         </p>
         {entries.length > 0 && (
-          <span className="text-xs text-zinc-600">{entries.length} stories</span>
+          <span className="text-xs text-ink-faint tnum">{entries.length} stories</span>
         )}
       </div>
 
       {loading && (
         <div className="flex justify-center py-6">
-          <div className="w-4 h-4 rounded-full border-2 border-zinc-700 border-t-zinc-400 animate-spin" />
+          <div className="w-4 h-4 rounded-full border-2 border-rule border-t-accent animate-spin" />
         </div>
       )}
 
       {!loading && entries.length === 0 && (
-        <p className="text-xs text-zinc-600 py-2">
+        <p className="text-xs text-ink-faint py-2">
           Stories you mark as read will appear here.
         </p>
       )}
@@ -63,25 +63,25 @@ export default function ReadingHistory({ userId }: ReadingHistoryProps) {
               return (
                 <div
                   key={entry.pinId}
-                  className="flex items-start gap-3 px-2.5 py-2.5 rounded-xl hover:bg-zinc-800/60 transition-colors"
+                  className="flex items-start gap-3 px-2.5 py-2.5 rounded-md hover:bg-paper-sunken transition-colors"
                 >
                   <span
                     className="mt-1.5 w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: color }}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-zinc-200 leading-snug line-clamp-2">
+                    <p className="font-serif text-[15px] text-ink leading-snug line-clamp-2">
                       {entry.pin.headline}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <span
-                        className="text-[10px] font-semibold"
+                        className="text-[10px] font-semibold uppercase tracking-wider"
                         style={{ color }}
                       >
                         {label}
                       </span>
-                      <span className="text-[10px] text-zinc-600">·</span>
-                      <span className="text-[10px] text-zinc-600">{timeAgo(entry.readAt)}</span>
+                      <span className="text-[10px] text-ink-faint">·</span>
+                      <span className="text-[10px] text-ink-faint tnum">{timeAgo(entry.readAt)}</span>
                     </div>
                   </div>
                 </div>
@@ -92,7 +92,7 @@ export default function ReadingHistory({ userId }: ReadingHistoryProps) {
           {entries.length > 5 && (
             <button
               onClick={() => setExpanded((v) => !v)}
-              className="mt-2 w-full text-xs text-zinc-500 hover:text-zinc-300 transition-colors py-1.5"
+              className="mt-2 w-full text-xs text-ink-soft hover:text-ink transition-colors py-1.5"
             >
               {expanded ? "Show less" : `Show all ${entries.length} stories`}
             </button>

@@ -64,52 +64,50 @@ export default async function PinPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center px-5 py-16">
+    <div className="min-h-screen bg-paper text-ink font-sans flex flex-col items-center justify-center px-5 py-16">
       <div className="w-full max-w-md">
 
         {/* Wordmark */}
-        <p className="text-center text-sm font-bold text-zinc-500 mb-8 tracking-widest uppercase">
+        <p className="text-center font-serif text-2xl text-ink mb-8">
           Briefed
         </p>
 
         {/* Card */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl">
+        <div className="bg-paper-raised border border-rule rounded-lg p-6 shadow-sm">
           {/* Topic + region */}
           <div className="flex items-center gap-2 mb-4">
             <span
-              className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-              style={{ backgroundColor: color + "1f", color }}
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em]"
+              style={{ color }}
             >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
               {label}
             </span>
             {pin.region_label && (
-              <span className="text-xs text-zinc-500">{pin.region_label as string}</span>
+              <span className="text-xs text-ink-faint">· {pin.region_label as string}</span>
             )}
-            <span className="text-xs text-zinc-600 ml-auto">
+            <span className="text-xs text-ink-faint ml-auto tnum">
               {timeAgo(pin.published_at as string)}
             </span>
           </div>
 
           {/* Headline */}
-          <h1 className="text-white font-bold text-lg leading-snug mb-3">
+          <h1 className="font-serif text-ink text-2xl leading-[1.2] mb-3">
             {pin.headline as string}
           </h1>
 
           {/* Summary */}
           {pin.summary && (
-            <p className="text-zinc-400 text-sm leading-relaxed mb-4">
+            <p className="text-ink-soft text-[15px] leading-relaxed mb-4">
               {pin.summary as string}
             </p>
           )}
 
           {/* Stats */}
           {stats.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-x-5 gap-y-1.5 mb-4 border-y border-rule py-3">
               {stats.map((stat, i) => (
-                <span
-                  key={i}
-                  className="text-xs font-medium px-3 py-1.5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-300"
-                >
+                <span key={i} className="text-sm text-ink-soft tnum">
                   {stat}
                 </span>
               ))}
@@ -121,7 +119,7 @@ export default async function PinPage({ params }: Props) {
             href={pin.source_url as string}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-zinc-600 hover:text-indigo-400 underline underline-offset-2 transition-colors"
+            className="text-xs text-ink-soft hover:text-accent underline underline-offset-2 transition-colors"
           >
             {pin.source_name as string}
           </a>
@@ -131,11 +129,11 @@ export default async function PinPage({ params }: Props) {
         <div className="mt-6 text-center">
           <Link
             href="/"
-            className="inline-block bg-white text-zinc-900 font-semibold text-sm px-6 py-3 rounded-2xl hover:bg-zinc-100 transition-colors"
+            className="inline-block bg-accent text-white font-medium text-sm px-6 py-3 rounded-md hover:bg-accent-hover transition-colors"
           >
             Open the full map →
           </Link>
-          <p className="text-xs text-zinc-600 mt-3">
+          <p className="text-xs text-ink-faint mt-3">
             Briefed — your daily world news, mapped
           </p>
         </div>
