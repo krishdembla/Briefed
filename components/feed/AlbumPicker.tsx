@@ -115,24 +115,24 @@ export default function AlbumPicker({ pinId, userId, onClose, onSavedChange }: A
 
   return (
     // Backdrop
-    <div className="absolute inset-0 z-20 bg-black/20">
+    <div className="absolute inset-0 z-20 bg-ink/20">
       {/* Sheet */}
       <div
         ref={sheetRef}
-        className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl shadow-2xl"
+        className="absolute inset-x-0 bottom-0 bg-paper-raised rounded-t-2xl shadow-2xl border-t border-rule"
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-0.5">
-          <div className="w-8 h-1 rounded-full bg-zinc-200" />
+          <div className="w-8 h-1 rounded-full bg-rule-strong" />
         </div>
 
         <div className="px-4 pt-2 pb-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-bold text-zinc-900">Save to collection</p>
+            <p className="font-serif text-lg text-ink">Save to collection</p>
             <button
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:text-zinc-800 transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-paper-sunken text-ink-soft hover:text-ink transition-colors"
               aria-label="Close"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,7 +143,7 @@ export default function AlbumPicker({ pinId, userId, onClose, onSavedChange }: A
 
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="w-5 h-5 rounded-full border-2 border-zinc-200 border-t-indigo-500 animate-spin" />
+              <div className="w-5 h-5 rounded-full border-2 border-rule border-t-accent animate-spin" />
             </div>
           ) : (
             <>
@@ -157,21 +157,21 @@ export default function AlbumPicker({ pinId, userId, onClose, onSavedChange }: A
                       key={album.id}
                       onClick={() => toggleAlbum(album)}
                       disabled={!!togglingId}
-                      className={`relative flex flex-col items-start gap-1.5 p-3.5 rounded-xl border text-left transition-all ${
+                      className={`relative flex flex-col items-start gap-1.5 p-3.5 rounded-md border text-left transition-all ${
                         isChecked
-                          ? "bg-indigo-50 border-indigo-300"
-                          : "bg-zinc-50 border-zinc-200 hover:border-zinc-400"
+                          ? "bg-accent/8 border-accent/40"
+                          : "bg-paper border-rule hover:border-rule-strong"
                       } disabled:opacity-60`}
                     >
                       {/* Bookmark icon */}
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-0.5 ${
-                        isChecked ? "bg-indigo-100" : "bg-zinc-200"
+                      <div className={`w-8 h-8 rounded-md flex items-center justify-center mb-0.5 ${
+                        isChecked ? "bg-accent/15" : "bg-paper-sunken"
                       }`}>
                         {isToggling ? (
-                          <div className="w-3.5 h-3.5 rounded-full border-2 border-zinc-300 border-t-indigo-500 animate-spin" />
+                          <div className="w-3.5 h-3.5 rounded-full border-2 border-rule border-t-accent animate-spin" />
                         ) : (
                           <svg
-                            className={`w-4 h-4 ${isChecked ? "text-indigo-600" : "text-zinc-500"}`}
+                            className={`w-4 h-4 ${isChecked ? "text-accent" : "text-ink-faint"}`}
                             fill={isChecked ? "currentColor" : "none"}
                             stroke="currentColor"
                             strokeWidth={2}
@@ -181,15 +181,15 @@ export default function AlbumPicker({ pinId, userId, onClose, onSavedChange }: A
                           </svg>
                         )}
                       </div>
-                      <p className={`text-xs font-semibold truncate w-full ${isChecked ? "text-indigo-700" : "text-zinc-800"}`}>
+                      <p className={`text-xs font-medium truncate w-full ${isChecked ? "text-accent" : "text-ink"}`}>
                         {album.name}
                       </p>
-                      <p className="text-[10px] text-zinc-400">
+                      <p className="text-[10px] text-ink-faint tnum">
                         {album.pinCount} {album.pinCount === 1 ? "story" : "stories"}
                       </p>
                       {/* Checkmark badge */}
                       {isChecked && (
-                        <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center">
+                        <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-accent flex items-center justify-center">
                           <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                           </svg>
@@ -213,18 +213,18 @@ export default function AlbumPicker({ pinId, userId, onClose, onSavedChange }: A
                     }}
                     placeholder="Collection name…"
                     maxLength={40}
-                    className="flex-1 text-sm px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200"
+                    className="flex-1 text-sm px-3 py-2 rounded-md border border-rule bg-paper text-ink focus:outline-none focus:border-accent"
                   />
                   <button
                     onClick={handleCreate}
                     disabled={!newName.trim() || savingNew}
-                    className="shrink-0 px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-40 transition-colors"
+                    className="shrink-0 px-3 py-2 rounded-md bg-accent text-white text-xs font-medium hover:bg-accent-hover disabled:opacity-40 transition-colors"
                   >
                     {savingNew ? "…" : "Create"}
                   </button>
                   <button
                     onClick={() => { setCreating(false); setNewName(""); }}
-                    className="shrink-0 text-xs text-zinc-400 hover:text-zinc-600"
+                    className="shrink-0 text-xs text-ink-faint hover:text-ink"
                   >
                     Cancel
                   </button>
@@ -232,7 +232,7 @@ export default function AlbumPicker({ pinId, userId, onClose, onSavedChange }: A
               ) : (
                 <button
                   onClick={() => setCreating(true)}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl border border-dashed border-zinc-300 hover:border-indigo-400 hover:bg-indigo-50/60 transition-all text-sm font-medium text-zinc-500 hover:text-indigo-600"
+                  className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-md border border-dashed border-rule-strong hover:border-accent hover:bg-accent/5 transition-all text-sm font-medium text-ink-soft hover:text-accent"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

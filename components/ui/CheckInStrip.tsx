@@ -14,19 +14,25 @@ export default function CheckInStrip({ readCount, streak, checkinFailed }: Check
 
   return (
     <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center pointer-events-none" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
-      <div className={`flex items-center gap-3 bg-zinc-900/90 backdrop-blur-sm border rounded-full px-4 py-2 shadow-lg ${checkinFailed ? "border-red-700" : "border-zinc-700"}`}>
+      <div
+        className="flex items-center gap-3 backdrop-blur-sm border rounded-full px-4 py-2 shadow-lg pointer-events-auto"
+        style={{
+          backgroundColor: "rgba(28, 26, 23, 0.92)",
+          borderColor: checkinFailed ? "#9e4a3c" : "rgba(255,255,255,0.14)",
+        }}
+      >
         <div className="flex gap-1.5">
           {dots.map((filled, i) => (
             <div
               key={i}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                filled ? "bg-white scale-110" : "bg-zinc-600"
+                filled ? "bg-paper scale-110" : "bg-white/25"
               }`}
             />
           ))}
         </div>
 
-        <span className="text-xs font-medium text-zinc-300">
+        <span className="text-xs font-medium text-white/85">
           {checkinFailed
             ? "Check-in failed — will retry"
             : done
@@ -34,13 +40,11 @@ export default function CheckInStrip({ readCount, streak, checkinFailed }: Check
             : `Read ${REQUIRED - readCount} more to check in`}
         </span>
 
-        {done && !checkinFailed && <span className="text-xs">🎉</span>}
-
         {streak > 0 && (
           <>
-            <div className="w-px h-3 bg-zinc-700" />
-            <span className="text-xs font-semibold text-orange-400">
-              🔥 {streak} {streak === 1 ? "day" : "days"}
+            <div className="w-px h-3 bg-white/20" />
+            <span className="text-xs font-semibold tnum" style={{ color: "#d19a52" }}>
+              {streak} {streak === 1 ? "day" : "days"} streak
             </span>
           </>
         )}

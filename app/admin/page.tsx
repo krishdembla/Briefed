@@ -58,8 +58,8 @@ function formatDay(isoDate: string, todayStr: string): string {
 }
 
 const TOPIC_COLORS_ADMIN: Record<string, string> = {
-  politics: "#3b82f6", economy: "#22c55e", conflict: "#ef4444",
-  health: "#ec4899", climate: "#14b8a6", tech: "#a855f7", other: "#94a3b8",
+  politics: "#3e5c7e", economy: "#4f7050", conflict: "#9e4a3c",
+  health: "#8a5670", climate: "#3f736a", tech: "#63558a", other: "#7a756b",
 };
 const TOPIC_LABELS_ADMIN: Record<string, string> = {
   politics: "Politics", economy: "Economy", conflict: "Conflict",
@@ -67,18 +67,18 @@ const TOPIC_LABELS_ADMIN: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  success: "bg-emerald-500/15 text-emerald-400",
-  error:   "bg-red-500/15 text-red-400",
-  running: "bg-yellow-500/15 text-yellow-400",
+  success: "bg-[#4f7050]/15 text-[#4f7050]",
+  error:   "bg-[#9e4a3c]/15 text-[#9e4a3c]",
+  running: "bg-[#a9762f]/15 text-[#a9762f]",
 };
 
 const DIGEST_STATUS_STYLES: Record<string, string> = {
-  success: "bg-emerald-500/15 text-emerald-400",
-  error:   "bg-red-500/15 text-red-400",
-  skipped: "bg-amber-500/15 text-amber-400",
-  running: "bg-yellow-500/15 text-yellow-400",
-  missed:  "bg-zinc-700/40 text-zinc-500",
-  pending: "bg-indigo-500/15 text-indigo-400",
+  success: "bg-[#4f7050]/15 text-[#4f7050]",
+  error:   "bg-[#9e4a3c]/15 text-[#9e4a3c]",
+  skipped: "bg-[#a9762f]/15 text-[#a9762f]",
+  running: "bg-[#a9762f]/15 text-[#a9762f]",
+  missed:  "bg-paper-sunken text-ink-faint",
+  pending: "bg-accent/15 text-accent",
 };
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -193,13 +193,13 @@ export default async function AdminPage() {
   });
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-paper text-ink font-sans">
       <div className="max-w-4xl mx-auto px-6 py-10">
 
         {/* Header */}
         <div className="mb-10">
-          <h1 className="text-2xl font-bold tracking-tight">Admin</h1>
-          <p className="text-zinc-500 text-sm mt-1">Briefed internal dashboard</p>
+          <h1 className="font-serif text-3xl tracking-tight">Admin</h1>
+          <p className="text-ink-faint text-sm mt-1">Briefed internal dashboard</p>
         </div>
 
         {/* Stat cards */}
@@ -218,8 +218,8 @@ export default async function AdminPage() {
 
         {/* Last pipeline run summary */}
         {lastRun && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-6">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Last pipeline run</p>
+          <div className="bg-paper-raised border border-rule rounded-lg p-5 mb-6">
+            <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em] mb-3">Last pipeline run</p>
             <div className="flex flex-wrap gap-6">
               <Metric label="Status">
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[lastRun.status]}`}>
@@ -233,7 +233,7 @@ export default async function AdminPage() {
               <Metric label="AI done">{lastRun.pins_ai_done}</Metric>
             </div>
             {lastRun.error_msg && (
-              <p className="mt-3 text-xs text-red-400 bg-red-500/10 rounded-xl px-3 py-2 font-mono break-all">
+              <p className="mt-3 text-xs text-[#9e4a3c] bg-[#9e4a3c]/10 rounded-md px-3 py-2 font-mono break-all">
                 {lastRun.error_msg}
               </p>
             )}
@@ -244,15 +244,15 @@ export default async function AdminPage() {
         {(topicBars.length > 0 || regionBars.length > 0) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             {topicBars.length > 0 && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">Topic mix (24h)</p>
+              <div className="bg-paper-raised border border-rule rounded-lg p-5">
+                <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em] mb-4">Topic mix (24h)</p>
                 <div className="flex flex-col gap-2.5">
                   {topicBars.map(({ topic, count, pct }) => (
                     <div key={topic} className="flex items-center gap-3">
-                      <span className="text-xs text-zinc-400 w-16 shrink-0">
+                      <span className="text-xs text-ink-soft w-16 shrink-0">
                         {TOPIC_LABELS_ADMIN[topic] ?? topic}
                       </span>
-                      <div className="flex-1 bg-zinc-800 rounded-full h-2 overflow-hidden">
+                      <div className="flex-1 bg-paper-sunken rounded-full h-2 overflow-hidden">
                         <div
                           className="h-full rounded-full"
                           style={{
@@ -261,28 +261,28 @@ export default async function AdminPage() {
                           }}
                         />
                       </div>
-                      <span className="text-xs text-zinc-500 w-6 text-right shrink-0">{count}</span>
+                      <span className="text-xs text-ink-faint w-6 text-right shrink-0 tnum">{count}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
             {regionBars.length > 0 && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">Top regions (24h)</p>
+              <div className="bg-paper-raised border border-rule rounded-lg p-5">
+                <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em] mb-4">Top regions (24h)</p>
                 <div className="flex flex-col gap-2.5">
                   {regionBars.map(({ label, count, pct }) => (
                     <div key={label} className="flex items-center gap-3">
-                      <span className="text-xs text-zinc-400 w-20 shrink-0 truncate" title={label}>
+                      <span className="text-xs text-ink-soft w-20 shrink-0 truncate" title={label}>
                         {label}
                       </span>
-                      <div className="flex-1 bg-zinc-800 rounded-full h-2 overflow-hidden">
+                      <div className="flex-1 bg-paper-sunken rounded-full h-2 overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-indigo-500"
+                          className="h-full rounded-full bg-accent"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="text-xs text-zinc-500 w-6 text-right shrink-0">{count}</span>
+                      <span className="text-xs text-ink-faint w-6 text-right shrink-0 tnum">{count}</span>
                     </div>
                   ))}
                 </div>
@@ -295,22 +295,22 @@ export default async function AdminPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
           {/* Pipeline run history */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-zinc-800">
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Pipeline history</p>
+          <div className="bg-paper-raised border border-rule rounded-lg overflow-hidden">
+            <div className="px-5 py-4 border-b border-rule">
+              <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em]">Pipeline history</p>
             </div>
-            <div className="divide-y divide-zinc-800">
+            <div className="divide-y divide-rule">
               {runs.length === 0 && (
-                <p className="px-5 py-4 text-sm text-zinc-600">No runs yet.</p>
+                <p className="px-5 py-4 text-sm text-ink-faint">No runs yet.</p>
               )}
               {runs.map((run) => (
                 <div key={run.id} className="px-5 py-3 flex items-center gap-4 text-sm">
                   <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[run.status]}`}>
                     {run.status}
                   </span>
-                  <span className="text-zinc-300 min-w-0 text-xs">{formatTime(run.started_at)}</span>
-                  <span className="text-zinc-600 text-xs">{duration(run.started_at, run.finished_at)}</span>
-                  <span className="text-zinc-600 text-xs ml-auto shrink-0">
+                  <span className="text-ink-soft min-w-0 text-xs tnum">{formatTime(run.started_at)}</span>
+                  <span className="text-ink-faint text-xs tnum">{duration(run.started_at, run.finished_at)}</span>
+                  <span className="text-ink-faint text-xs ml-auto shrink-0 tnum">
                     {run.pins_stored} stored
                   </span>
                 </div>
@@ -319,26 +319,26 @@ export default async function AdminPage() {
           </div>
 
           {/* Digest run history — one row per day for last 15 days */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-zinc-800">
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Digest history</p>
+          <div className="bg-paper-raised border border-rule rounded-lg overflow-hidden">
+            <div className="px-5 py-4 border-b border-rule">
+              <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em]">Digest history</p>
             </div>
-            <div className="divide-y divide-zinc-800">
+            <div className="divide-y divide-rule">
               {digestDays.map(({ day, run, displayStatus }) => (
                 <div key={day} className="px-5 py-3 flex items-center gap-3 text-sm">
                   <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${DIGEST_STATUS_STYLES[displayStatus] ?? ""}`}>
                     {displayStatus}
                   </span>
-                  <span className="text-zinc-300 text-xs min-w-0">
+                  <span className="text-ink-soft text-xs min-w-0">
                     {formatDay(day, today)}
                   </span>
                   {run ? (
-                    <span className="text-zinc-600 text-xs ml-auto shrink-0">
+                    <span className="text-ink-faint text-xs ml-auto shrink-0 tnum">
                       {run.emails_sent} sent
                       {run.emails_failed > 0 ? ` · ${run.emails_failed} failed` : ""}
                     </span>
                   ) : (
-                    <span className="text-zinc-700 text-xs ml-auto shrink-0">—</span>
+                    <span className="text-ink-faint text-xs ml-auto shrink-0">—</span>
                   )}
                 </div>
               ))}
@@ -356,10 +356,10 @@ export default async function AdminPage() {
 
 function StatCard({ label, value, note }: { label: string; value: string | number; note?: string }) {
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-4">
-      <p className="text-xs text-zinc-500 mb-1">{label}</p>
-      <p className="text-2xl font-bold text-white">{value}</p>
-      {note && <p className="text-xs text-zinc-600 mt-0.5">{note}</p>}
+    <div className="bg-paper-raised border border-rule rounded-lg px-4 py-4">
+      <p className="text-[11px] text-ink-faint uppercase tracking-wider mb-1">{label}</p>
+      <p className="font-serif text-3xl text-ink tnum">{value}</p>
+      {note && <p className="text-xs text-ink-faint mt-0.5">{note}</p>}
     </div>
   );
 }
@@ -367,8 +367,8 @@ function StatCard({ label, value, note }: { label: string; value: string | numbe
 function Metric({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs text-zinc-500 mb-1">{label}</p>
-      <div className="text-sm font-medium text-white">{children}</div>
+      <p className="text-[11px] text-ink-faint uppercase tracking-wider mb-1">{label}</p>
+      <div className="text-sm font-medium text-ink">{children}</div>
     </div>
   );
 }

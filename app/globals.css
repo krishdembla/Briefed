@@ -1,28 +1,49 @@
 @import "tailwindcss";
 
+/* ── Broadsheet design tokens ───────────────────────────────────────────────
+   Warm editorial palette: paper backgrounds, warm near-black ink, hairline
+   rules, and a single restrained deep ink-blue accent. No gradients. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #fbfaf8;         /* page background — warm off-white */
+  --paper-raised: #ffffff;  /* cards / raised surfaces */
+  --paper-sunken: #f3f0e9;  /* subtle inset / hover wells */
+  --ink: #1c1a17;           /* primary text — warm near-black */
+  --ink-soft: #57534e;      /* secondary text */
+  --ink-faint: #8c867c;     /* meta / tertiary text */
+  --rule: #e6e1d7;          /* hairline dividers & borders */
+  --rule-strong: #d6d0c4;   /* emphasised hairline */
+  --accent: #1e3a5f;        /* deep ink-blue */
+  --accent-hover: #16304f;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-paper-sunken: var(--paper-sunken);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Type system: Newsreader serif for editorial voice, Inter for UI. */
+  --font-serif: var(--font-serif);
+  --font-sans: var(--font-sans);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "kern";
+}
+
+/* Tabular, old-style figures read as editorial in stat numerals. */
+.tnum {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes slide-up {
@@ -44,7 +65,7 @@ body {
 }
 
 @keyframes modal-in {
-  from { opacity: 0; transform: scale(0.95) translateY(6px); }
+  from { opacity: 0; transform: scale(0.98) translateY(6px); }
   to   { opacity: 1; transform: scale(1)    translateY(0); }
 }
 

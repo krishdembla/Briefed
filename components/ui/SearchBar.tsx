@@ -79,7 +79,7 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
         <button
           onClick={expand}
           aria-label="Search pins"
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all shadow-lg"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-paper-raised/90 backdrop-blur-sm border border-rule text-ink-soft hover:text-ink hover:border-rule-strong transition-all shadow-md"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -92,8 +92,8 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
   return (
     <div ref={containerRef} className="absolute right-4 z-10 w-[calc(100vw-5rem)] sm:w-72" style={{ top: "calc(1rem + env(safe-area-inset-top, 0px))" }}>
       {/* Input row */}
-      <div className="flex items-center bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-2xl px-3 py-2 gap-2 shadow-xl">
-        <svg className="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="flex items-center bg-paper-raised/95 backdrop-blur-sm border border-rule rounded-lg px-3 py-2 gap-2 shadow-xl">
+        <svg className="w-3.5 h-3.5 text-ink-faint shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <input
@@ -102,9 +102,9 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search headlines, regions, topics…"
-          className="bg-transparent text-white text-sm placeholder-zinc-500 outline-none flex-1 min-w-0"
+          className="bg-transparent text-ink text-sm placeholder-ink-faint outline-none flex-1 min-w-0"
         />
-        <button onClick={collapse} className="text-zinc-500 hover:text-white transition-colors shrink-0" aria-label="Close search">
+        <button onClick={collapse} className="text-ink-faint hover:text-ink transition-colors shrink-0" aria-label="Close search">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -120,11 +120,11 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
             <button
               key={topic}
               onClick={() => setTopicFilter(active ? null : topic)}
-              className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border"
+              className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border bg-paper-raised/90 backdrop-blur-sm"
               style={
                 active
-                  ? { backgroundColor: color + "33", borderColor: color + "88", color }
-                  : { backgroundColor: "transparent", borderColor: "#3f3f46", color: "#71717a" }
+                  ? { borderColor: color, color }
+                  : { borderColor: "var(--rule)", color: "var(--ink-faint)" }
               }
             >
               {TOPIC_LABELS[topic]}
@@ -135,9 +135,9 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
 
       {/* Dropdown results */}
       {(query.trim() || topicFilter) && (
-        <div className="mt-1.5 bg-zinc-900/95 backdrop-blur-sm border border-zinc-800 rounded-2xl shadow-xl overflow-hidden">
+        <div className="mt-1.5 bg-paper-raised/95 backdrop-blur-sm border border-rule rounded-lg shadow-xl overflow-x-hidden overflow-y-auto max-h-[65vh] overscroll-contain">
           {results.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-zinc-500">No matches found</p>
+            <p className="px-4 py-3 text-sm text-ink-faint">No matches found</p>
           ) : (
             <ul>
               {results.map((pin, i) => {
@@ -147,19 +147,19 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
                   <li key={pin.id}>
                     <button
                       onClick={() => handleSelect(pin)}
-                      className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-zinc-800/70 transition-colors ${
-                        i < results.length - 1 ? "border-b border-zinc-800/60" : ""
+                      className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-paper-sunken transition-colors ${
+                        i < results.length - 1 ? "border-b border-rule" : ""
                       }`}
                     >
                       <span className="mt-1.5 w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-zinc-200 leading-snug line-clamp-2">{pin.headline}</p>
+                        <p className="font-serif text-[15px] text-ink leading-snug line-clamp-2">{pin.headline}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] font-semibold" style={{ color }}>{label}</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color }}>{label}</span>
                           {pin.region_label && (
                             <>
-                              <span className="text-[10px] text-zinc-700">·</span>
-                              <span className="text-[10px] text-zinc-500">{pin.region_label}</span>
+                              <span className="text-[10px] text-ink-faint">·</span>
+                              <span className="text-[10px] text-ink-faint">{pin.region_label}</span>
                             </>
                           )}
                         </div>
@@ -175,7 +175,7 @@ export default function SearchBar({ pins, onSelectPin }: SearchBarProps) {
 
       {/* Hint when input is empty and no filter active */}
       {!query.trim() && !topicFilter && (
-        <p className="mt-2 text-xs text-zinc-600 text-center">
+        <p className="mt-2 text-xs text-ink-faint text-center">
           Filter by topic or type to search
         </p>
       )}

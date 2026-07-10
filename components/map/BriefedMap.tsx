@@ -138,7 +138,7 @@ export default function BriefedMap({ geojson, onPinClick, onFlyTo, onResetView, 
           type="circle"
           filter={["has", "point_count"]}
           paint={{
-            "circle-color": "#4f46e5",
+            "circle-color": "#1e3a5f",
             "circle-radius": ["step", ["get", "point_count"], 18, 5, 26, 20, 36],
             "circle-opacity": 0.9,
             "circle-stroke-width": 3,
@@ -229,14 +229,14 @@ export default function BriefedMap({ geojson, onPinClick, onFlyTo, onResetView, 
         <button
           onClick={() => mapRef.current?.zoomIn()}
           aria-label="Zoom in"
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-sm border border-zinc-200 text-zinc-700 hover:text-indigo-600 hover:border-indigo-300 transition-all shadow-lg text-lg font-light select-none"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-paper-raised/95 backdrop-blur-sm border border-rule text-ink-soft hover:text-accent hover:border-rule-strong transition-all shadow-md text-lg font-light select-none"
         >
           +
         </button>
         <button
           onClick={() => mapRef.current?.zoomOut()}
           aria-label="Zoom out"
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-sm border border-zinc-200 text-zinc-700 hover:text-indigo-600 hover:border-indigo-300 transition-all shadow-lg text-lg font-light select-none"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-paper-raised/95 backdrop-blur-sm border border-rule text-ink-soft hover:text-accent hover:border-rule-strong transition-all shadow-md text-lg font-light select-none"
         >
           −
         </button>

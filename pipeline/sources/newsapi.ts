@@ -3,16 +3,15 @@ import type { RawArticle } from "@/types/pipeline";
 
 const BASE_URL = "https://newsapi.org/v2";
 
-// Sources that produce celebrity gossip, entertainment, sports, or tabloid
-// content not relevant to a global news map.
+// Sources that produce celebrity gossip, entertainment, or tabloid content not
+// relevant to a global news map. Quality sports outlets (ESPN, The Athletic,
+// Sky Sports, etc.) are intentionally NOT blocked — sports is a first-class
+// topic; routine match results are filtered later by clusterByEvent importance.
 const BLOCKED_SOURCES = new Set([
   // Entertainment / celebrity
   "tmz", "entertainment weekly", "people", "e! news", "us weekly",
   "hollywood reporter", "variety", "deadline", "billboard",
   "vulture", "the wrap", "screen rant", "ign", "polygon",
-  // Sports
-  "espn", "bleacher report", "sports illustrated", "the athletic",
-  "sky sports", "goal.com", "nba.com",
   // Tabloids / clickbait
   "buzzfeed", "buzzfeed news", "the daily mail", "daily mail",
   "the mirror", "the sun", "daily star", "national enquirer",
@@ -125,6 +124,16 @@ export async function fetchFromNewsApi(): Promise<RawArticle[]> {
       params: {
         q: "Brazil OR Argentina OR Mexico OR Colombia OR Venezuela OR Chile OR Peru OR India OR Pakistan OR Bangladesh OR Indonesia OR Philippines OR Vietnam OR Myanmar OR Thailand OR Malaysia",
         language: "en", sortBy: "publishedAt", pageSize: 50, apiKey,
+      },
+    }),
+    // Sports — major leagues + tier-1 competitions. Broad enough to cover US
+    // leagues (NFL/NBA/MLB/NHL), European football, tennis, F1 and cricket that
+    // the RSS sports feeds underrepresent. clusterByEvent drops routine results.
+    fetchWithRetry<NewsApiResponse>({
+      ...everythingBase,
+      params: {
+        q: "NFL OR NBA OR MLB OR NHL OR \"Premier League\" OR \"Champions League\" OR \"La Liga\" OR Bundesliga OR \"Serie A\" OR \"Formula 1\" OR Wimbledon OR \"Grand Slam\" OR \"World Cup\" OR Olympics OR \"transfer window\" OR playoffs OR \"IPL cricket\"",
+        language: "en", sortBy: "publishedAt", pageSize: 40, apiKey,
       },
     }),
   ];

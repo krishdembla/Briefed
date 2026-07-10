@@ -328,7 +328,7 @@ export default function MapContainer() {
   };
 
   return (
-    <div className="relative w-full h-screen flex bg-zinc-50">
+    <div className="relative w-full h-screen flex bg-paper">
       {/* Onboarding modal — shown once to new signed-in users with no topic prefs */}
       {showOnboarding && userId && (
         <OnboardingModal userId={userId} onComplete={handleOnboardingComplete} />
@@ -336,8 +336,8 @@ export default function MapContainer() {
 
       {/* Error banner */}
       {error && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white">
-          <div className="text-red-500 text-sm">{error}</div>
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-paper">
+          <div className="text-[#9e4a3c] text-sm">{error}</div>
         </div>
       )}
 
@@ -435,13 +435,13 @@ export default function MapContainer() {
 
         {/* Bottom tab bar */}
         <div
-          className="shrink-0 flex bg-white border-t border-zinc-200"
+          className="shrink-0 flex bg-paper-raised border-t border-rule"
           style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
         >
           <button
             onClick={() => setMobileTab("feed")}
-            className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-[11px] font-semibold transition-colors ${
-              mobileTab === "feed" ? "text-zinc-900" : "text-zinc-400"
+            className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-[11px] font-medium transition-colors ${
+              mobileTab === "feed" ? "text-accent" : "text-ink-faint"
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={mobileTab === "feed" ? 2.5 : 1.5}>
@@ -451,8 +451,8 @@ export default function MapContainer() {
           </button>
           <button
             onClick={() => setMobileTab("map")}
-            className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-[11px] font-semibold transition-colors ${
-              mobileTab === "map" ? "text-zinc-900" : "text-zinc-400"
+            className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-[11px] font-medium transition-colors ${
+              mobileTab === "map" ? "text-accent" : "text-ink-faint"
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={mobileTab === "map" ? 2.5 : 1.5}>

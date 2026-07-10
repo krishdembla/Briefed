@@ -47,7 +47,7 @@ export async function processArticle(
 
   let parsed: Record<string, string | null>;
   try {
-    const raw = await callLLM(prompt, 800);
+    const raw = await callLLM(prompt, 1200);
     console.log(`[processArticle] raw output for "${headline.slice(0, 60)}...": ${raw}`);
     const text = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
     parsed = JSON.parse(text);
@@ -71,7 +71,9 @@ export async function processArticle(
     stat1: (parsed.stat1 as string) || "",
     stat2: (parsed.stat2 as string) || "",
     stat3: (parsed.stat3 as string) || "",
-    why_it_matters: (parsed.why_it_matters as string) || "",
+    // The prompt emits this as "standfirst" (an editorial dek); fall back to the
+    // legacy "why_it_matters" key for resilience. Stored in why_it_matters.
+    why_it_matters: (parsed.standfirst as string) || (parsed.why_it_matters as string) || "",
     topic,
     tags: Array.isArray(rawTags) ? (rawTags as unknown[]).filter((t): t is string => typeof t === "string") : [],
   };

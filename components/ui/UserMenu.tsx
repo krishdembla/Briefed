@@ -89,10 +89,10 @@ export default function UserMenu({ userId, userEmail }: UserMenuProps) {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="Open profile"
-        className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-lg border ${
+        className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold font-serif transition-all shadow-md border ${
           open
-            ? "bg-white text-zinc-900 border-white"
-            : "bg-zinc-900/80 backdrop-blur-sm border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-white"
+            ? "bg-accent text-white border-accent"
+            : "bg-paper-raised/90 backdrop-blur-sm border-rule text-ink hover:border-rule-strong"
         }`}
       >
         {initial}
@@ -100,23 +100,23 @@ export default function UserMenu({ userId, userEmail }: UserMenuProps) {
 
       {/* Profile panel */}
       {open && (
-        <div className="absolute top-10 left-0 w-72 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-modal-in">
+        <div className="absolute top-12 left-0 w-72 bg-paper-raised border border-rule rounded-lg shadow-2xl overflow-hidden animate-modal-in">
           {/* Header */}
-          <div className="px-4 py-4 border-b border-zinc-800">
+          <div className="px-4 py-4 border-b border-rule">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-bold text-white shrink-0">
+              <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center text-sm font-semibold font-serif text-white shrink-0">
                 {initial}
               </div>
               <div className="min-w-0">
-                <p className="text-white text-sm font-semibold truncate">{userEmail}</p>
-                <p className="text-zinc-500 text-xs mt-0.5">Briefed member</p>
+                <p className="text-ink text-sm font-medium truncate">{userEmail}</p>
+                <p className="text-ink-faint text-xs mt-0.5">Briefed member</p>
               </div>
             </div>
           </div>
 
           {/* Digest preferences */}
           <div className="px-4 py-4">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+            <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-[0.15em] mb-3">
               Morning digest topics
             </p>
             <div className="grid grid-cols-3 gap-1.5">
@@ -127,14 +127,14 @@ export default function UserMenu({ userId, userEmail }: UserMenuProps) {
                   <button
                     key={topic}
                     onClick={() => toggle(topic)}
-                    className={`px-2 py-1.5 rounded-xl text-xs font-medium transition-all border text-center ${
+                    className={`px-2 py-1.5 rounded-md text-xs font-medium transition-all border text-center ${
                       isSelected
-                        ? "border-transparent"
-                        : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                        ? "bg-paper-sunken"
+                        : "bg-paper border-rule text-ink-soft hover:border-rule-strong"
                     }`}
                     style={
                       isSelected
-                        ? { backgroundColor: color + "20", borderColor: color + "70", color }
+                        ? { borderColor: color, color }
                         : {}
                     }
                   >
@@ -147,10 +147,10 @@ export default function UserMenu({ userId, userEmail }: UserMenuProps) {
             <button
               onClick={handleSave}
               disabled={saving}
-              className={`mt-3 w-full py-2 rounded-xl text-xs font-semibold transition-all ${
+              className={`mt-3 w-full py-2 rounded-md text-xs font-medium transition-all ${
                 saved
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                  : "bg-white text-zinc-900 hover:bg-zinc-100 active:scale-[0.98]"
+                  ? "bg-accent/10 text-accent border border-accent/30"
+                  : "bg-accent text-white hover:bg-accent-hover active:scale-[0.99]"
               } disabled:opacity-50`}
             >
               {saved ? "Saved ✓" : saving ? "Saving…" : "Save preferences"}
@@ -159,17 +159,17 @@ export default function UserMenu({ userId, userEmail }: UserMenuProps) {
 
           {/* Profile + Sign out */}
           <div className="px-4 pb-4">
-            <div className="h-px bg-zinc-800 mb-3" />
+            <div className="h-px bg-rule mb-3" />
             <button
               onClick={() => router.push("/profile")}
-              className="w-full py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 transition-all mb-2"
+              className="w-full py-2 rounded-md text-xs font-medium text-ink-soft hover:text-ink hover:bg-paper-sunken border border-rule hover:border-rule-strong transition-all mb-2"
             >
               View profile & streak
             </button>
             <button
               onClick={handleSignOut}
               disabled={signingOut}
-              className="w-full py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-red-400 hover:bg-red-500/10 border border-zinc-800 hover:border-red-500/30 transition-all disabled:opacity-50"
+              className="w-full py-2 rounded-md text-xs font-medium text-ink-soft hover:text-[#9e4a3c] hover:bg-[#9e4a3c]/8 border border-rule hover:border-[#9e4a3c]/30 transition-all disabled:opacity-50"
             >
               {signingOut ? "Signing out…" : "Sign out"}
             </button>

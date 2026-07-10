@@ -82,23 +82,23 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-paper flex items-center justify-center p-4 font-sans">
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-2">
-          <h1 className="text-white text-3xl font-bold tracking-tight mb-2">
+          <h1 className="font-serif text-4xl tracking-tight text-ink mb-2">
             Personalise your digest
           </h1>
-          <p className="text-zinc-400 text-sm leading-relaxed">
-            Choose which topics appear in your <span className="text-white">morning email</span>. The map always shows everything.
+          <p className="text-ink-soft text-sm leading-relaxed">
+            Choose which topics appear in your <span className="text-ink font-medium">morning email</span>. The map always shows everything.
           </p>
         </div>
 
         {/* Divider with label */}
         <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-zinc-800" />
-          <span className="text-xs text-zinc-600">pick any you care about</span>
-          <div className="flex-1 h-px bg-zinc-800" />
+          <div className="flex-1 h-px bg-rule" />
+          <span className="text-[11px] uppercase tracking-[0.15em] text-ink-faint">pick any you care about</span>
+          <div className="flex-1 h-px bg-rule" />
         </div>
 
         {/* Topic grid */}
@@ -111,21 +111,17 @@ export default function OnboardingPage() {
               <button
                 key={topic}
                 onClick={() => toggle(topic)}
-                className={`relative flex flex-col items-start gap-1.5 p-4 rounded-2xl border text-left transition-all ${
+                className={`relative flex flex-col items-start gap-1.5 p-4 rounded-md border text-left transition-all ${
                   isSelected
-                    ? "border-transparent"
-                    : "bg-zinc-900 border-zinc-800 hover:border-zinc-600"
+                    ? "bg-paper-sunken"
+                    : "bg-paper-raised border-rule hover:border-rule-strong"
                 }`}
-                style={
-                  isSelected
-                    ? { backgroundColor: color + "18", borderColor: color + "80" }
-                    : {}
-                }
+                style={isSelected ? { borderColor: color } : {}}
               >
                 {/* Checkmark */}
                 <div
                   className={`absolute top-3 right-3 w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                    isSelected ? "border-transparent" : "border-zinc-700"
+                    isSelected ? "border-transparent" : "border-rule-strong"
                   }`}
                   style={isSelected ? { backgroundColor: color } : {}}
                 >
@@ -137,12 +133,12 @@ export default function OnboardingPage() {
                 </div>
 
                 <span
-                  className="text-sm font-semibold"
-                  style={{ color: isSelected ? color : "#e4e4e7" }}
+                  className="font-serif text-lg"
+                  style={{ color: isSelected ? color : "var(--ink)" }}
                 >
                   {TOPIC_LABELS[topic]}
                 </span>
-                <span className="text-xs text-zinc-500 leading-snug pr-4">
+                <span className="text-xs text-ink-faint leading-snug pr-4">
                   {TOPIC_DESCRIPTIONS[topic]}
                 </span>
               </button>
@@ -150,12 +146,12 @@ export default function OnboardingPage() {
           })}
         </div>
 
-        {error && <p className="text-red-400 text-xs text-center mb-4">{error}</p>}
+        {error && <p className="text-[#9e4a3c] text-xs text-center mb-4">{error}</p>}
 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full py-3 rounded-2xl bg-white text-zinc-900 font-semibold text-sm hover:bg-zinc-100 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full py-3 rounded-md bg-accent text-white font-medium text-sm hover:bg-accent-hover active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {saving
             ? "Saving…"
@@ -166,7 +162,7 @@ export default function OnboardingPage() {
 
         <button
           onClick={handleSkip}
-          className="w-full mt-3 py-2 text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+          className="w-full mt-3 py-2 text-xs text-ink-faint hover:text-ink transition-colors"
         >
           Skip for now — I{"'"}ll get everything in my digest
         </button>
