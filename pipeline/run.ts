@@ -6,6 +6,7 @@ import { fetchFromRss } from "./sources/rss";
 import { deduplicate } from "./deduplicate";
 import { clusterByEvent } from "@/lib/ai/clusterByEvent";
 import { processArticle as processArticleLLM } from "@/lib/ai/processArticle";
+import { resolveArticleImage } from "@/lib/images/resolve";
 import { sendAlertEmail } from "@/lib/email/alerts";
 import { detectThreads } from "@/lib/ai/detectThreads";
 import type { Pin, RawArticle } from "@/types/pipeline";
@@ -229,7 +230,14 @@ export async function runPipeline(): Promise<PipelineResult> {
 // Processes one article via a single combined LLM call (summary + geo).
 // Never throws — failures degrade gracefully into a minimal pin.
 async function processArticle(article: RawArticle, runId: string): Promise<Pin> {
-  const { summary, location } = await processArticleLLM(article.headline, article.body);
+  // Resolve the image concurrently with the LLM call — image resolution is far
+  // faster than the LLM, so it adds essentially no wall-clock time. A poor or
+  // missing image resolves to null (clean text-only card) rather than an ugly
+  // logo/placeholder; the page's og:image is used as a fallback.
+  const [{ summary, location }, ogImageUrl] = await Promise.all([
+    processArticleLLM(article.headline, article.body),
+    resolveArticleImage(article).catch(() => article.ogImageUrl ?? null),
+  ]);
 
   const aiProcessed = !!(summary && summary.summary && summary.summary !== article.headline);
 
@@ -244,7 +252,7 @@ async function processArticle(article: RawArticle, runId: string): Promise<Pin> 
     stat_2: summary.stat2 || null,
     stat_3: summary.stat3 || null,
     why_it_matters: summary.why_it_matters || null,
-    og_image_url: article.ogImageUrl ?? null,
+    og_image_url: ogImageUrl,
     lat: location?.lat ?? null,
     lng: location?.lng ?? null,
     country_code: location?.countryCode || null,
