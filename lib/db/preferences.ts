@@ -17,11 +17,16 @@ export async function getPreferences(userId: string): Promise<UserTopics> {
 }
 
 // Upserts the user's topic preferences. Throws on failure.
+// Stamps onboarded_at so the "did this user finish onboarding?" check survives
+// cookie clears and new devices — proxy.ts falls back to this column.
 export async function savePreferences(userId: string, topics: UserTopics): Promise<void> {
   const supabase = createSupabaseBrowserClient();
   const { error } = await supabase
     .from("user_preferences")
-    .upsert({ user_id: userId, topics }, { onConflict: "user_id" });
+    .upsert(
+      { user_id: userId, topics, onboarded_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    );
 
   if (error) {
     console.error("[preferences] Failed to save:", error.message);

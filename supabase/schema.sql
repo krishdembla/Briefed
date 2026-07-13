@@ -102,9 +102,10 @@ CREATE POLICY "Users can update own checkins"
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS user_preferences (
-  user_id    uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  topics     text[] NOT NULL DEFAULT '{}',
-  created_at timestamptz NOT NULL DEFAULT now()
+  user_id       uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  topics        text[] NOT NULL DEFAULT '{}',
+  onboarded_at  timestamptz,
+  created_at    timestamptz NOT NULL DEFAULT now()
 );
 
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;

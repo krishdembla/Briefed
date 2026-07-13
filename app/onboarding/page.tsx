@@ -34,12 +34,27 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
+    // Fresh signups can land here before the browser client has hydrated the
+    // session cookie. If getUser() returns null, poll onAuthStateChange so we
+    // pick up SIGNED_IN as soon as it fires — avoids the "refresh to unblock
+    // Save" papercut.
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUserId(data.user.id);
+      if (data.user) {
+        setUserId(data.user.id);
+        setSessionReady(true);
+      }
     });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        setSessionReady(true);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
   }, []);
 
   function toggle(topic: PinTopic) {
@@ -55,17 +70,29 @@ export default function OnboardingPage() {
     document.cookie = "briefed_onboarded=1; path=/; max-age=31536000; SameSite=Lax";
   }
 
+  // Resolve the user id: prefer state, otherwise ask supabase directly. Handles
+  // the case where the user clicks Save before useEffect's getUser() resolves.
+  async function resolveUserId(): Promise<string | null> {
+    if (userId) return userId;
+    const supabase = createSupabaseBrowserClient();
+    const { data } = await supabase.auth.getUser();
+    return data.user?.id ?? null;
+  }
+
   async function handleSave() {
-    if (!userId) {
-      setError("Session not ready — please wait a moment and try again.");
-      return;
-    }
     setSaving(true);
     setError(null);
 
+    const id = await resolveUserId();
+    if (!id) {
+      setError("Session not ready — please refresh the page and try again.");
+      setSaving(false);
+      return;
+    }
+
     try {
       const topics = selected.size > 0 ? [...selected] : SELECTABLE_TOPICS;
-      await savePreferences(userId, topics);
+      await savePreferences(id, topics);
       markOnboarded();
       router.push("/map");
       router.refresh();
@@ -150,10 +177,12 @@ export default function OnboardingPage() {
 
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !sessionReady}
           className="w-full py-3 rounded-md bg-accent text-white font-medium text-sm hover:bg-accent-hover active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {saving
+          {!sessionReady
+            ? "Loading your account…"
+            : saving
             ? "Saving…"
             : selected.size > 0
             ? `Save ${selected.size} topic${selected.size > 1 ? "s" : ""} & open map`
@@ -162,7 +191,8 @@ export default function OnboardingPage() {
 
         <button
           onClick={handleSkip}
-          className="w-full mt-3 py-2 text-xs text-ink-faint hover:text-ink transition-colors"
+          disabled={!sessionReady}
+          className="w-full mt-3 py-2 text-xs text-ink-faint hover:text-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Skip for now — I{"'"}ll get everything in my digest
         </button>

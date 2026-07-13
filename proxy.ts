@@ -36,7 +36,7 @@ export async function proxy(request: NextRequest) {
   const isAdmin = pathname.startsWith("/admin");
   const isPin = pathname.startsWith("/pin");
   const isPublic = isRoot || isAuthPage || isPin;
-  const hasOnboarded = request.cookies.has(ONBOARDED_COOKIE);
+  const cookieOnboarded = request.cookies.has(ONBOARDED_COOKIE);
 
   // Authenticated users landing on the marketing page go straight to the map
   if (user && isRoot) {
@@ -50,6 +50,28 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
     return NextResponse.redirect(url);
+  }
+
+  // Resolve "did this user complete onboarding?" — cookie first (cheap), then
+  // fall back to the DB so returning users on a fresh browser/device don't get
+  // re-prompted to pick topics. When the DB confirms, set the cookie so future
+  // requests skip the lookup.
+  let hasOnboarded = cookieOnboarded;
+  if (user && !cookieOnboarded) {
+    const { data: prefs } = await supabase
+      .from("user_preferences")
+      .select("onboarded_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (prefs?.onboarded_at) {
+      hasOnboarded = true;
+      supabaseResponse.cookies.set(ONBOARDED_COOKIE, "1", {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+    }
   }
 
   // Authenticated users don't need the auth page — but reset-password must stay
