@@ -15,31 +15,28 @@ const groq = new OpenAI({
   timeout: GROQ_TIMEOUT_MS,
 });
 
-// llama-3.3-70b-versatile is deprecated (decommissioned Aug 16 2026).
-// Qwen3 32B is the correct replacement — note there is no 27B variant in the Qwen3 lineup.
+// openai/gpt-oss-20b: OpenAI-published open-weights model on Groq. Production-tier,
+// native structured output, no chain-of-thought preamble, ~$0.075/$0.30 per 1M tokens.
 // Override via GROQ_MODEL env var.
-export const LLM_MODEL = process.env.GROQ_MODEL ?? "qwen/qwen3-32b";
+export const LLM_MODEL = process.env.GROQ_MODEL ?? "openai/gpt-oss-20b";
 
 // Sends a single user prompt to Groq and returns the raw text response.
 // Retries up to 3 times on 429 rate limit errors, waiting the retry-after delay each time.
 export async function callLLM(prompt: string, maxTokens: number): Promise<string> {
   const MAX_RETRIES = 3;
 
-  // /no-think disables Qwen3's chain-of-thought mode. Without this the model emits
-  // a large <think> block before every response, adding 5-20s of latency per call
-  // and causing the pipeline to exceed Vercel's 300s function limit.
-  const promptWithNoThink = `/no-think\n\n${prompt}`;
-
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
+      // reasoning_effort=low + include_reasoning=false keeps gpt-oss models from
+      // spending the token budget on hidden chain-of-thought and emitting empty content.
       const completion = await groq.chat.completions.create({
         model: LLM_MODEL,
         max_tokens: maxTokens,
-        messages: [{ role: "user", content: promptWithNoThink }],
-      });
-      const content = completion.choices[0]?.message?.content ?? "";
-      // Strip any residual <think> blocks just in case the model ignores /no-think.
-      return content.replace(/<think>[\s\S]*?<\/think>\s*/gi, "").trim();
+        messages: [{ role: "user", content: prompt }],
+        reasoning_effort: "low",
+        include_reasoning: false,
+      } as Parameters<typeof groq.chat.completions.create>[0]);
+      return (completion.choices[0]?.message?.content ?? "").trim();
     } catch (err: unknown) {
       const e = err as { status?: number; headers?: Record<string, string> };
       if (e?.status === 429 && attempt < MAX_RETRIES - 1) {
