@@ -29,13 +29,16 @@ export async function callLLM(prompt: string, maxTokens: number): Promise<string
     try {
       // reasoning_effort=low + include_reasoning=false keeps gpt-oss models from
       // spending the token budget on hidden chain-of-thought and emitting empty content.
+      // Both are Groq extensions, not in OpenAI SDK types — cast to the non-streaming
+      // overload so `.choices` stays reachable and the create() call keeps its
+      // non-streaming return type.
       const completion = await groq.chat.completions.create({
         model: LLM_MODEL,
         max_tokens: maxTokens,
         messages: [{ role: "user", content: prompt }],
         reasoning_effort: "low",
         include_reasoning: false,
-      } as Parameters<typeof groq.chat.completions.create>[0]);
+      } as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming);
       return (completion.choices[0]?.message?.content ?? "").trim();
     } catch (err: unknown) {
       const e = err as { status?: number; headers?: Record<string, string> };
