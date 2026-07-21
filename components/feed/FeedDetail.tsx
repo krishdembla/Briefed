@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { TOPIC_COLORS, TOPIC_LABELS, type MapPin } from "@/types/map";
 import AlbumPicker from "./AlbumPicker";
+import PinPrimer from "../pin/PinPrimer";
 
 interface FeedDetailProps {
   pin: MapPin;
@@ -225,6 +226,10 @@ export default function FeedDetail({
             ))}
           </div>
         )}
+
+        {/* "What led to this?" — background primer, placed here (right after the
+            body) so it reads as the natural "want more?" beat before actions. */}
+        <PinPrimer pinId={pin.id} topicColor={topicColor} />
 
         {/* Like button + read count */}
         <div className="flex items-center gap-2 mb-4">
