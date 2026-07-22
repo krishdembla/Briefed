@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { TOPIC_COLORS, TOPIC_LABELS, type MapPin } from "@/types/map";
 import AlbumPicker from "./AlbumPicker";
 import PinPrimer from "../pin/PinPrimer";
+import MarketTakeaway from "../pin/MarketTakeaway";
 
 interface FeedDetailProps {
   pin: MapPin;
@@ -230,6 +231,11 @@ export default function FeedDetail({
         {/* "What led to this?" — background primer, placed here (right after the
             body) so it reads as the natural "want more?" beat before actions. */}
         <PinPrimer pinId={pin.id} topicColor={topicColor} />
+
+        {/* Market takeaway — editorial "why this affects these tickers" note.
+            Only renders when the classifier marked the pin high-relevance with
+            at least one whitelist ticker. */}
+        <MarketTakeaway pin={pin} topicColor={topicColor} />
 
         {/* Like button + read count */}
         <div className="flex items-center gap-2 mb-4">

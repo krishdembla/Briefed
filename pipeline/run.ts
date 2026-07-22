@@ -9,6 +9,8 @@ import { processArticle as processArticleLLM } from "@/lib/ai/processArticle";
 import { resolveArticleImage } from "@/lib/images/resolve";
 import { sendAlertEmail } from "@/lib/email/alerts";
 import { detectThreads } from "@/lib/ai/detectThreads";
+import { classifyMarket } from "@/lib/ai/classifyMarket";
+import { hasMarketKeyword } from "@/lib/data/marketKeywords";
 import type { Pin, RawArticle } from "@/types/pipeline";
 
 const RATE_LIMIT_MINUTES = 30;
@@ -241,6 +243,22 @@ async function processArticle(article: RawArticle, runId: string): Promise<Pin> 
 
   const aiProcessed = !!(summary && summary.summary && summary.summary !== article.headline);
 
+  // Market-impact classification. The cheap pre-filter (topic + keyword scan)
+  // skips the LLM call for the ~60% of pins that are obviously non-market —
+  // sports, entertainment, human interest with no company/policy angle.
+  const summaryText = summary.summary ?? article.body?.slice(0, 500) ?? "";
+  const shouldClassify =
+    summary.topic === "economy" ||
+    summary.topic === "tech" ||
+    hasMarketKeyword(`${article.headline} ${summaryText}`);
+
+  const market = shouldClassify
+    ? await classifyMarket(article.headline, summaryText).catch((err) => {
+        console.error(`[classifyMarket] failed for "${article.headline.slice(0, 60)}":`, err);
+        return { market_relevance: "none" as const, tickers: [], rationale: "" };
+      })
+    : { market_relevance: "none" as const, tickers: [], rationale: "" };
+
   return {
     source_url: article.sourceUrl,
     source_name: article.sourceName,
@@ -259,6 +277,9 @@ async function processArticle(article: RawArticle, runId: string): Promise<Pin> 
     region_label: location?.regionLabel || null,
     topic: summary.topic,
     tags: summary.tags ?? [],
+    tickers: market.tickers,
+    market_relevance: market.market_relevance,
+    market_classified_at: new Date().toISOString(),
     pipeline_run_id: runId,
     ai_processed: aiProcessed,
     geo_processed: !!location?.lat,

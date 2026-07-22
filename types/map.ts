@@ -20,6 +20,10 @@ export interface MapPin {
   country_code: string | null;
   region_label: string | null;
   related_count?: number;
+  // Market-impact fields (feature 2). Optional so endpoints that predate the
+  // feature can still return valid MapPin objects — the chart just won't show.
+  tickers?: string[];
+  market_relevance?: "high" | "medium" | "low" | "none" | null;
 }
 
 export type TopicFilter = PinTopic | "all" | "foryou" | "trending";

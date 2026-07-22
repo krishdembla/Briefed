@@ -21,7 +21,7 @@ export async function GET() {
     // No read data yet — fall back to most recent pins
     const { data: recent } = await supabase
       .from("pins")
-      .select("id, headline, summary, stat_1, stat_2, stat_3, topic, source_name, source_url, published_at, lat, lng, country_code, region_label")
+      .select("id, headline, summary, stat_1, stat_2, stat_3, topic, source_name, source_url, published_at, lat, lng, country_code, region_label, tickers, market_relevance")
       .not("lat", "is", null)
       .not("headline", "is", null)
       .order("published_at", { ascending: false })
@@ -44,7 +44,7 @@ export async function GET() {
 
   const { data: pins, error: pinsError } = await supabase
     .from("pins")
-    .select("id, headline, summary, stat_1, stat_2, stat_3, topic, source_name, source_url, published_at, lat, lng, country_code, region_label")
+    .select("id, headline, summary, stat_1, stat_2, stat_3, topic, source_name, source_url, published_at, lat, lng, country_code, region_label, tickers, market_relevance")
     .in("id", topIds);
 
   if (pinsError) {
