@@ -55,6 +55,11 @@ export interface Pin {
   region_label: string | null;
   topic: PinTopic | null;
   tags: string[] | null;
+  // Market-impact classification (feature 2). Empty tickers + market_relevance
+  // "none" is the default when the pre-filter skips the classifier entirely.
+  tickers: string[];
+  market_relevance: "high" | "medium" | "low" | "none" | null;
+  market_classified_at: string | null;
   pipeline_run_id: string;
   ai_processed: boolean;
   geo_processed: boolean;
