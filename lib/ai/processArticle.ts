@@ -114,7 +114,7 @@ export async function processArticle(
     tags: Array.isArray(rawTags) ? (rawTags as unknown[]).filter((t): t is string => typeof t === "string") : [],
   };
 
-  let locationName = parsed.locationName as string | null;
+  const locationName = parsed.locationName as string | null;
   let countryCode = parsed.countryCode as string | null;
   let regionLabel = (parsed.regionLabel as string) || "";
 
