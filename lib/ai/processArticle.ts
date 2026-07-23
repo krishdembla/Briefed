@@ -10,6 +10,42 @@ const PROCESS_PROMPT = fs.readFileSync(
   "utf-8"
 );
 
+// Cheaper fallback: if the main call returns no location AND no country,
+// re-ask the LLM with a narrower prompt that only extracts the geographic
+// anchor. Recovers stories like "US strikes on Iran" where the main pass
+// failed but the country is obvious. Kept in a separate prompt file per
+// project convention (all prompts in /prompts).
+const COUNTRY_PROMPT = fs.readFileSync(
+  path.join(process.cwd(), "prompts/extract-country.txt"),
+  "utf-8"
+);
+
+interface CountryFallback {
+  countryCode: string | null;
+  regionLabel: string | null;
+}
+
+async function extractCountryFallback(
+  headline: string,
+  body: string
+): Promise<CountryFallback | null> {
+  const prompt = COUNTRY_PROMPT
+    .replace("{{headline}}", headline)
+    .replace("{{bodyExcerpt}}", body.slice(0, 1500));
+
+  try {
+    const raw = await callLLM(prompt, 200);
+    const text = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    const parsed = JSON.parse(text) as CountryFallback;
+    const cc = typeof parsed.countryCode === "string" ? parsed.countryCode.toUpperCase() : null;
+    const rl = typeof parsed.regionLabel === "string" ? parsed.regionLabel : null;
+    return { countryCode: cc, regionLabel: rl };
+  } catch (err) {
+    console.error(`[processArticle] Country-fallback LLM call failed for "${headline.slice(0, 60)}":`, err);
+    return null;
+  }
+}
+
 const VALID_TOPICS: PinTopic[] = [
   "politics", "economy", "climate", "conflict", "health", "tech", "sports", "other",
 ];
@@ -78,12 +114,27 @@ export async function processArticle(
     tags: Array.isArray(rawTags) ? (rawTags as unknown[]).filter((t): t is string => typeof t === "string") : [],
   };
 
-  const locationName = parsed.locationName as string | null;
-  const countryCode = parsed.countryCode as string | null;
-  const regionLabel = (parsed.regionLabel as string) || "";
+  let locationName = parsed.locationName as string | null;
+  let countryCode = parsed.countryCode as string | null;
+  let regionLabel = (parsed.regionLabel as string) || "";
 
-  // No geo at all
+  // Silent geo failure was the second-biggest driver of "empty Today feed" —
+  // a run could store 90 pins but leave 40+ with null lat/lng, invisible to the
+  // map. When the main pass returns nothing geo-wise, retry with a targeted
+  // country-only prompt. Recovers the obvious cases (US strikes on Iran, etc.)
+  // without adding latency to the ~70% of articles that already have a location.
   if (!locationName && !countryCode) {
+    const fallback = await extractCountryFallback(headline, bodyExcerpt);
+    if (fallback?.countryCode) {
+      countryCode = fallback.countryCode;
+      if (!regionLabel && fallback.regionLabel) regionLabel = fallback.regionLabel;
+      console.log(`[processArticle] Geo fallback recovered "${countryCode}" for "${headline.slice(0, 60)}"`);
+    }
+  }
+
+  // Still no geo — accept it and log so we can track how often this happens.
+  if (!locationName && !countryCode) {
+    console.warn(`[processArticle] No geo anchor for "${headline.slice(0, 80)}"`);
     return { summary, location: null };
   }
 

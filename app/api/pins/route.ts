@@ -5,6 +5,13 @@ import { supabase } from "@/lib/db/supabase-service";
 // Requires lat/lng (placeable on map) and a headline — summary/stats are optional
 // and the card degrades gracefully when absent.
 // Uses the service role key (server-side only) — never exposed to the browser.
+//
+// Freshness window is measured against created_at (when the pipeline ingested
+// the article), not the source's published_at. Sources frequently publish with
+// stale timestamps — CNN/Reuters items that landed today can carry a 40h-old
+// published_at and would otherwise vanish from the "Today" bucket the moment
+// they enter the DB. Sort still uses published_at so genuinely newer stories
+// float to the top of the list.
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const rawHours = parseInt(searchParams.get("hours") ?? "168", 10);
@@ -21,7 +28,7 @@ export async function GET(request: NextRequest) {
     .not("lat", "is", null)
     .not("lng", "is", null)
     .not("headline", "is", null)
-    .gte("published_at", since)
+    .gte("created_at", since)
     .order("published_at", { ascending: false });
 
   if (error) {

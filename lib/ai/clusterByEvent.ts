@@ -23,6 +23,15 @@ const CLUSTER_CHUNK_SIZE = 50;
 const CHUNK_CONCURRENCY = 5;
 const CHUNK_BATCH_DELAY_MS = 3_000;
 
+// Cross-chunk dedup safety cap. If the second LLM pass drops more than this
+// fraction of survivors it's almost certainly the LLM re-litigating importance
+// on that day's roll, not finding real duplicates. Trust the per-chunk output
+// instead and keep the pins.
+const CROSS_CHUNK_MAX_DROP_RATIO = 0.4;
+// Below this many survivors there is not enough overlap between chunks to
+// justify another LLM call — skip the second pass entirely.
+const CROSS_CHUNK_SKIP_BELOW = 15;
+
 interface ClusterResult {
   keepIndex: number;
   importance: number;
@@ -96,11 +105,33 @@ export async function clusterByEvent(articles: RawArticle[]): Promise<RawArticle
   // Cross-chunk duplicate pass: articles covering the same event may have survived
   // in separate chunks. Run one final cluster call on the merged kept set to catch them.
   // The kept set is always small enough to fit in a single chunk.
-  if (allKept.length > 1) {
-    const deduped = await clusterChunk(allKept);
-    console.log(`[clusterByEvent] Cross-chunk dedup: ${allKept.length} → ${deduped.length}`);
-    return deduped;
+  //
+  // Two safety valves guard against the pass silently gutting the day's output
+  // (previously the main driver of 13-vs-95 daily variance):
+  //   1. Skip entirely when the survivor pool is small — few chunks means little
+  //      cross-chunk overlap to catch.
+  //   2. If the pass drops more than CROSS_CHUNK_MAX_DROP_RATIO, the LLM is
+  //      almost certainly re-scoring importance rather than finding dupes.
+  //      Distrust it and keep the per-chunk output.
+  if (allKept.length <= CROSS_CHUNK_SKIP_BELOW) {
+    console.log(`[clusterByEvent] Skipping cross-chunk dedup (only ${allKept.length} survivors)`);
+    return allKept;
   }
 
-  return allKept;
+  const deduped = await clusterChunk(allKept);
+  const dropRatio = 1 - deduped.length / allKept.length;
+  console.log(
+    `[clusterByEvent] Cross-chunk dedup: ${allKept.length} → ${deduped.length} (dropped ${(dropRatio * 100).toFixed(0)}%)`
+  );
+
+  if (dropRatio > CROSS_CHUNK_MAX_DROP_RATIO) {
+    console.warn(
+      `[clusterByEvent] Cross-chunk pass dropped ${(dropRatio * 100).toFixed(0)}% — above ${
+        CROSS_CHUNK_MAX_DROP_RATIO * 100
+      }% safety cap. Keeping per-chunk output to avoid stochastic under-count.`
+    );
+    return allKept;
+  }
+
+  return deduped;
 }
