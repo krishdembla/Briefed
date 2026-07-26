@@ -276,6 +276,7 @@ async function processArticle(article: RawArticle, runId: string): Promise<Pin> 
     country_code: location?.countryCode || null,
     region_label: location?.regionLabel || null,
     topic: summary.topic,
+    topics: summary.topics && summary.topics.length > 0 ? summary.topics : [summary.topic],
     tags: summary.tags ?? [],
     tickers: market.tickers,
     market_relevance: market.market_relevance,

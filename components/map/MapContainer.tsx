@@ -23,6 +23,18 @@ const BriefedMap = dynamic(() => import("./BriefedMap"), { ssr: false });
 
 const VIEWPORT_ZOOM_THRESHOLD = 3;
 
+// Returns the full topic set for a pin (multi-topic aware). Falls back to
+// [pin.topic] for rows written before the multi-topic migration ran, and
+// filters out any string that isn't a valid PinTopic.
+function pinTopicSet(pin: MapPin): PinTopic[] {
+  const raw: unknown[] = Array.isArray(pin.topics) && pin.topics.length > 0
+    ? pin.topics
+    : pin.topic
+    ? [pin.topic]
+    : [];
+  return raw.filter((t): t is PinTopic => typeof t === "string" && t.length > 0);
+}
+
 function getTodayKey() {
   return `briefed-checkin-${new Date().toISOString().slice(0, 10)}`;
 }
@@ -202,13 +214,13 @@ export default function MapContainer() {
       (p) => new Date(p.published_at).getTime() >= cutoff && !notInterestedIds.has(p.id)
     );
     if (activeTopic === "foryou" && userTopics.length > 0) {
-      filtered = filtered.filter((p) => userTopics.includes((p.topic ?? "other") as PinTopic));
+      filtered = filtered.filter((p) => pinTopicSet(p).some((t) => userTopics.includes(t)));
       // Soft-suppress pins whose fine-grained tags the user has repeatedly dismissed
       if (suppressedTags.length > 0) {
         filtered = filtered.filter((p) => !p.tags?.some((t) => suppressedTags.includes(t)));
       }
     } else if (activeTopic !== "all" && activeTopic !== "foryou") {
-      filtered = filtered.filter((p) => p.topic === activeTopic);
+      filtered = filtered.filter((p) => pinTopicSet(p).includes(activeTopic as PinTopic));
     }
     if (hideRead) filtered = filtered.filter((p) => !readPins.has(p.id));
     return filtered.sort(
@@ -247,20 +259,26 @@ export default function MapContainer() {
     const visible = pins.filter((p) => new Date(p.published_at).getTime() >= cutoff);
     const counts: Record<string, number> = { all: visible.length };
     for (const pin of visible) {
-      if (pin.topic) counts[pin.topic] = (counts[pin.topic] ?? 0) + 1;
+      // Multi-topic pins increment BOTH tabs — matches how filtering behaves.
+      // Totals will exceed visible.length; that's intentional.
+      for (const t of pinTopicSet(pin)) {
+        counts[t] = (counts[t] ?? 0) + 1;
+      }
     }
     if (userTopics.length > 0) {
       counts["foryou"] = visible.filter((p) =>
-        userTopics.includes((p.topic ?? "other") as PinTopic)
+        pinTopicSet(p).some((t) => userTopics.includes(t))
       ).length;
     }
     return counts;
   }, [pins, freshnessDays, userTopics]);
 
   const expandedPinRelated = useMemo<MapPin[]>(() => {
-    if (!expandedPin?.topic) return [];
+    if (!expandedPin) return [];
+    const expandedTopics = pinTopicSet(expandedPin);
+    if (expandedTopics.length === 0) return [];
     return pins
-      .filter((p) => p.id !== expandedPin.id && p.topic === expandedPin.topic && !readPins.has(p.id))
+      .filter((p) => p.id !== expandedPin.id && !readPins.has(p.id) && pinTopicSet(p).some((t) => expandedTopics.includes(t)))
       .slice(0, 3);
   }, [pins, expandedPin, readPins]);
 

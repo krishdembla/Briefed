@@ -39,13 +39,15 @@ export async function summarizeArticle(
       throw new Error(`Incomplete JSON response: ${raw}`);
     }
 
+    const topic: PinTopic = isValidTopic(parsed.topic) ? parsed.topic : "other";
     return {
       summary: parsed.summary,
       stat1: parsed.stat1 || "",
       stat2: parsed.stat2 || "",
       stat3: parsed.stat3 || "",
       why_it_matters: parsed.why_it_matters || "",
-      topic: isValidTopic(parsed.topic) ? parsed.topic : "other",
+      topic,
+      topics: [topic],
       tags: Array.isArray(parsed.tags) ? parsed.tags.filter((t): t is string => typeof t === "string") : [],
     };
   } catch (err) {
@@ -59,6 +61,7 @@ export async function summarizeArticle(
       stat3: "",
       why_it_matters: "",
       topic: "other",
+      topics: ["other"],
       tags: [],
     };
   }

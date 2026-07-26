@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase
     .from("pins")
     .select(
-      "id, headline, summary, stat_1, stat_2, stat_3, why_it_matters, og_image_url, topic, tags, source_name, source_url, published_at, lat, lng, country_code, region_label, tickers, market_relevance"
+      "id, headline, summary, stat_1, stat_2, stat_3, why_it_matters, og_image_url, topic, topics, tags, source_name, source_url, published_at, lat, lng, country_code, region_label, tickers, market_relevance"
     )
     .not("lat", "is", null)
     .not("lng", "is", null)

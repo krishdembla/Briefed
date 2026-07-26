@@ -15,7 +15,12 @@ const FILTER_TOPICS: PinTopic[] = ["politics", "economy", "conflict", "health", 
 
 function matchPins(pins: MapPin[], query: string, topicFilter: PinTopic | null): MapPin[] {
   const q = query.toLowerCase().trim();
-  const pool = topicFilter ? pins.filter((p) => p.topic === topicFilter) : pins;
+  const pool = topicFilter
+    ? pins.filter((p) => {
+        const set = Array.isArray(p.topics) && p.topics.length > 0 ? p.topics : p.topic ? [p.topic] : [];
+        return set.includes(topicFilter);
+      })
+    : pins;
   if (!q) return topicFilter ? pool.slice(0, MAX_RESULTS) : [];
   return pool
     .filter(

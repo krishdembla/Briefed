@@ -91,7 +91,7 @@ export async function processArticle(
     console.error(`[processArticle] LLM call failed for "${headline.slice(0, 60)}":`, err);
     // Graceful fallback — pin is still stored, just without AI enrichment
     return {
-      summary: { summary: headline, stat1: "", stat2: "", stat3: "", why_it_matters: "", topic: "other", tags: [] },
+      summary: { summary: headline, stat1: "", stat2: "", stat3: "", why_it_matters: "", topic: "other", topics: ["other"], tags: [] },
       location: null,
     };
   }
@@ -100,6 +100,25 @@ export async function processArticle(
   const topic = parsed.topic && isValidTopic(parsed.topic as string)
     ? (parsed.topic as PinTopic)
     : "other";
+
+  // Multi-topic: prompt returns a "topics" array (primary first). Sanitize —
+  // drop unknown values, dedupe, force primary at index 0, cap at 2. Falls
+  // back to [topic] when the LLM omits the field or returns garbage.
+  const rawTopics = parsed.topics;
+  const parsedTopics: PinTopic[] = Array.isArray(rawTopics)
+    ? (rawTopics as unknown[])
+        .filter((t): t is string => typeof t === "string")
+        .map((t) => t.toLowerCase())
+        .filter((t): t is PinTopic => isValidTopic(t))
+    : [];
+  const uniqueTopics: PinTopic[] = [];
+  for (const t of [topic, ...parsedTopics]) {
+    if (!uniqueTopics.includes(t)) uniqueTopics.push(t);
+  }
+  // "other" is a catch-all — never carry it as a secondary alongside a real topic
+  const topics = uniqueTopics
+    .filter((t, i) => i === 0 || t !== "other")
+    .slice(0, 2);
 
   const rawTags = parsed.tags;
   const summary: AISummary = {
@@ -111,6 +130,7 @@ export async function processArticle(
     // legacy "why_it_matters" key for resilience. Stored in why_it_matters.
     why_it_matters: (parsed.standfirst as string) || (parsed.why_it_matters as string) || "",
     topic,
+    topics,
     tags: Array.isArray(rawTags) ? (rawTags as unknown[]).filter((t): t is string => typeof t === "string") : [],
   };
 
