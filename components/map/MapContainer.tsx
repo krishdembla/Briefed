@@ -332,7 +332,10 @@ export default function MapContainer() {
   };
 
   return (
-    <div className="relative w-full h-screen flex bg-paper">
+    <div
+      className="relative w-full flex bg-paper"
+      style={{ height: "100dvh", minHeight: "-webkit-fill-available" }}
+    >
       {/* Onboarding modal — shown once to new signed-in users with no topic prefs */}
       {showOnboarding && userId && (
         <OnboardingModal userId={userId} onComplete={handleOnboardingComplete} />
@@ -439,11 +442,13 @@ export default function MapContainer() {
               />
             )}
 
-            {/* Pin detail bottom sheet — keeps the map mounted underneath so
-                the WebGL context isn't torn down mid-touch and the user can
-                dismiss straight back to their map position. */}
+            {/* Pin detail sheet — full-viewport so FeedDetail's own safe-area
+                padding on the back bar isn't double-counted (which was pushing
+                the Back button under Safari's URL bar overlay on iOS). Map
+                stays mounted underneath so dismissing returns the user right
+                back to their map position without a WebGL teardown. */}
             {expandedPin && (
-              <div className="absolute inset-x-0 bottom-0 top-12 bg-paper-raised rounded-t-2xl shadow-2xl z-30 overflow-hidden animate-slide-up">
+              <div className="absolute inset-0 bg-paper-raised z-30 overflow-hidden animate-slide-up">
                 <FeedDetail
                   pin={expandedPin}
                   isRead={readPins.has(expandedPin.id)}
@@ -463,10 +468,12 @@ export default function MapContainer() {
 
         {/* Floating tab-bar island — always visible, centred at the bottom.
             Hidden while a pin sheet is open on the map so the reading surface
-            stays uncluttered. */}
+            stays uncluttered. Uses `fixed` (not `absolute`) so iOS Safari
+            anchors it to the visual viewport bottom instead of the layout
+            viewport bottom, which is hidden under the browser's URL/tab bar. */}
         {!(mobileTab === "map" && expandedPin) && (
           <div
-            className="absolute bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none"
+            className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none md:hidden"
             style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
           >
             <div className="flex items-stretch bg-paper-raised/95 backdrop-blur border border-rule rounded-full shadow-lg pointer-events-auto overflow-hidden">
