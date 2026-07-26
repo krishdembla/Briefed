@@ -6,14 +6,19 @@ interface CheckInStripProps {
   readCount: number;
   streak: number;
   checkinFailed?: boolean;
+  // When rendered on the mobile map view above the floating tab pill, the
+  // strip needs extra bottom padding so the two don't collide.
+  elevated?: boolean;
 }
 
-export default function CheckInStrip({ readCount, streak, checkinFailed }: CheckInStripProps) {
+export default function CheckInStrip({ readCount, streak, checkinFailed, elevated }: CheckInStripProps) {
   const done = readCount >= REQUIRED;
   const dots = Array.from({ length: REQUIRED }, (_, i) => i < readCount);
 
+  const bottomOffset = elevated ? "4.5rem" : "1rem";
+
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center pointer-events-none" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
+    <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center pointer-events-none" style={{ paddingBottom: `calc(${bottomOffset} + env(safe-area-inset-bottom, 0px))` }}>
       <div
         className="flex items-center gap-3 backdrop-blur-sm border rounded-full px-4 py-2 shadow-lg pointer-events-auto"
         style={{

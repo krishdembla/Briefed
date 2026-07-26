@@ -142,7 +142,10 @@ export default function FeedDetail({
       }}
     >
       {/* Back bar */}
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-rule bg-paper-raised/90 backdrop-blur-md">
+      <div
+        className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-rule bg-paper-raised/90 backdrop-blur-md"
+        style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top, 0px))" }}
+      >
         <button
           onClick={onBack}
           className="flex items-center gap-1.5 text-sm font-medium text-ink-soft hover:text-ink transition-colors"

@@ -8,6 +8,7 @@ import CheckInStrip from "@/components/ui/CheckInStrip";
 import SearchBar from "@/components/ui/SearchBar";
 import UserMenu from "@/components/ui/UserMenu";
 import FeedPanel from "@/components/feed/FeedPanel";
+import FeedDetail from "@/components/feed/FeedDetail";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
 import { createSupabaseBrowserClient } from "@/lib/db/supabase-browser";
 import { recordCheckin, fetchStreak } from "@/lib/db/checkins";
@@ -271,12 +272,15 @@ export default function MapContainer() {
     setActivePinId(pinId);
   };
 
-  // Map click → expand inline in the left feed panel (consistent with feed card clicks)
-  const handleMapPinClick = (pin: MapPin) => {
+  // Map click → expand inline in the left feed panel (desktop) or as a bottom
+  // sheet over the map (mobile). We re-hydrate the pin from local state because
+  // Mapbox flattens array/object properties (like `tags`) into JSON strings,
+  // which would then crash consumers that call `.map()` on them.
+  const handleMapPinClick = (clicked: MapPin) => {
+    const pin = pins.find((p) => p.id === clicked.id) ?? clicked;
     setExpandedPin(pin);
     setActivePinId(pin.id);
     setScrollToPinId(pin.id);
-    setMobileTab("feed"); // on mobile, switch to feed tab to show the detail
     setTimeout(() => setScrollToPinId(null), 100);
   };
 
@@ -373,94 +377,125 @@ export default function MapContainer() {
       </div>
 
       {/* Mobile: Feed/Map tabs */}
-      <div className="md:hidden absolute inset-0 flex flex-col">
-        {/* Tab content — fills remaining space */}
-        <div className="flex-1 overflow-hidden relative">
-          {mobileTab === "feed" && (
-            <div className="absolute inset-0">
-              <FeedPanel
-                pins={viewportPins}
+      <div className="md:hidden absolute inset-0">
+        {mobileTab === "feed" && (
+          <div className="absolute inset-0">
+            <FeedPanel
+              pins={viewportPins}
+              readPins={readPins}
+              savedPinIds={savedPinIds}
+              userId={userId}
+              activePinId={activePinId}
+              activeTopic={activeTopic}
+              userTopics={userTopics}
+              freshnessDays={freshnessDays}
+              hideRead={hideRead}
+              topicCounts={topicCounts}
+              expandedPin={expandedPin}
+              expandedPinRelated={expandedPinRelated}
+              onActivate={handleActivate}
+              onOpenPin={handleOpenFromFeed}
+              onCloseExpanded={handleCloseExpanded}
+              onMarkRead={handleRead}
+              onSaveToggle={handleSaveToggle}
+              onSelectRelated={handleSelectRelatedFromFeed}
+              onNotInterested={handleNotInterested}
+              onTopicChange={handleTopicChange}
+              onFreshnessChange={setFreshnessDays}
+              onToggleHideRead={() => setHideRead((v) => !v)}
+              scrollToPinId={scrollToPinId}
+            />
+          </div>
+        )}
+        {mobileTab === "map" && (
+          <div className="absolute inset-0">
+            {!loading && !error && (
+              <BriefedMap
+                geojson={geojson}
+                onPinClick={handleMapPinClick}
                 readPins={readPins}
-                savedPinIds={savedPinIds}
-                userId={userId}
+                onFlyTo={(fn) => { flyToRef.current = fn; }}
+                onResetView={(fn) => { resetViewRef.current = fn; }}
                 activePinId={activePinId}
-                activeTopic={activeTopic}
-                userTopics={userTopics}
-                freshnessDays={freshnessDays}
-                hideRead={hideRead}
-                topicCounts={topicCounts}
-                expandedPin={expandedPin}
-                expandedPinRelated={expandedPinRelated}
-                onActivate={handleActivate}
-                onOpenPin={handleOpenFromFeed}
-                onCloseExpanded={handleCloseExpanded}
-                onMarkRead={handleRead}
-                onSaveToggle={handleSaveToggle}
-                onSelectRelated={handleSelectRelatedFromFeed}
-                onNotInterested={handleNotInterested}
-                onTopicChange={handleTopicChange}
-                onFreshnessChange={setFreshnessDays}
-                onToggleHideRead={() => setHideRead((v) => !v)}
-                scrollToPinId={scrollToPinId}
+                onBoundsChange={handleBoundsChange}
               />
-            </div>
-          )}
-          {mobileTab === "map" && (
-            <div className="absolute inset-0">
-              {!loading && !error && (
-                <BriefedMap
-                  geojson={geojson}
-                  onPinClick={handleMapPinClick}
-                  readPins={readPins}
-                  onFlyTo={(fn) => { flyToRef.current = fn; }}
-                  onResetView={(fn) => { resetViewRef.current = fn; }}
-                  activePinId={activePinId}
-                  onBoundsChange={handleBoundsChange}
-                />
-              )}
-              {userId && userEmail && (
-                <UserMenu userId={userId} userEmail={userEmail} />
-              )}
-              <SearchBar
-                pins={pins}
-                onSelectPin={(pin) => {
-                  flyToRef.current?.(pin.lng, pin.lat);
-                  handleMapPinClick(pin);
-                }}
+            )}
+            {userId && userEmail && (
+              <UserMenu userId={userId} userEmail={userEmail} />
+            )}
+            <SearchBar
+              pins={pins}
+              onSelectPin={(pin) => {
+                flyToRef.current?.(pin.lng, pin.lat);
+                handleMapPinClick(pin);
+              }}
+            />
+            {!expandedPin && (
+              <CheckInStrip
+                readCount={readPins.size}
+                streak={streak}
+                checkinFailed={checkinFailed}
+                elevated
               />
-              {!expandedPin && <CheckInStrip readCount={readPins.size} streak={streak} checkinFailed={checkinFailed} />}
-            </div>
-          )}
-        </div>
+            )}
 
-        {/* Bottom tab bar */}
-        <div
-          className="shrink-0 flex bg-paper-raised border-t border-rule"
-          style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-        >
-          <button
-            onClick={() => setMobileTab("feed")}
-            className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-[11px] font-medium transition-colors ${
-              mobileTab === "feed" ? "text-accent" : "text-ink-faint"
-            }`}
+            {/* Pin detail bottom sheet — keeps the map mounted underneath so
+                the WebGL context isn't torn down mid-touch and the user can
+                dismiss straight back to their map position. */}
+            {expandedPin && (
+              <div className="absolute inset-x-0 bottom-0 top-12 bg-paper-raised rounded-t-2xl shadow-2xl z-30 overflow-hidden animate-slide-up">
+                <FeedDetail
+                  pin={expandedPin}
+                  isRead={readPins.has(expandedPin.id)}
+                  isSaved={savedPinIds.has(expandedPin.id)}
+                  userId={userId}
+                  relatedPins={expandedPinRelated}
+                  onBack={handleCloseExpanded}
+                  onRead={handleRead}
+                  onSaveToggle={(isSaved) => handleSaveToggle(expandedPin.id, isSaved)}
+                  onSelectRelated={handleSelectRelatedFromFeed}
+                  onNotInterested={handleNotInterested}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Floating tab-bar island — always visible, centred at the bottom.
+            Hidden while a pin sheet is open on the map so the reading surface
+            stays uncluttered. */}
+        {!(mobileTab === "map" && expandedPin) && (
+          <div
+            className="absolute bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none"
+            style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={mobileTab === "feed" ? 2.5 : 1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10" />
-            </svg>
-            Feed
-          </button>
-          <button
-            onClick={() => setMobileTab("map")}
-            className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-[11px] font-medium transition-colors ${
-              mobileTab === "map" ? "text-accent" : "text-ink-faint"
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={mobileTab === "map" ? 2.5 : 1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6-10l6 3m6 7l-5.447 2.724A1 1 0 0115 19.382V8.618a1 1 0 00-1.447-.894L9 10" />
-            </svg>
-            Map
-          </button>
-        </div>
+            <div className="flex items-stretch bg-paper-raised/95 backdrop-blur border border-rule rounded-full shadow-lg pointer-events-auto overflow-hidden">
+              <button
+                onClick={() => setMobileTab("feed")}
+                className={`flex items-center gap-1.5 px-5 py-2.5 text-xs font-medium transition-colors ${
+                  mobileTab === "feed" ? "text-accent" : "text-ink-faint"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={mobileTab === "feed" ? 2.5 : 1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10" />
+                </svg>
+                Feed
+              </button>
+              <div className="w-px bg-rule" />
+              <button
+                onClick={() => setMobileTab("map")}
+                className={`flex items-center gap-1.5 px-5 py-2.5 text-xs font-medium transition-colors ${
+                  mobileTab === "map" ? "text-accent" : "text-ink-faint"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={mobileTab === "map" ? 2.5 : 1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6-10l6 3m6 7l-5.447 2.724A1 1 0 0115 19.382V8.618a1 1 0 00-1.447-.894L9 10" />
+                </svg>
+                Map
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Right: Map (60%) — hidden on mobile */}
