@@ -217,10 +217,26 @@ export default function FeedDetail({
           </div>
         )}
 
-        {/* Topic tags — fine-grained labels when available */}
-        {pin.tags && pin.tags.length > 0 && (
+        {/* Topic tags — fine-grained labels when available. When the story
+            spans a secondary topic, prepend a subtle "Also in <Topic>" chip so
+            the reader knows it appears in another filter tab too. */}
+        {((pin.tags && pin.tags.length > 0) || (pin.topics && pin.topics.length > 1)) && (
           <div className="flex flex-wrap gap-1.5 mb-5">
-            {pin.tags.map((tag) => (
+            {pin.topics && pin.topics.length > 1 && pin.topics.slice(1).map((secondary) => {
+              const color = TOPIC_COLORS[secondary] ?? TOPIC_COLORS.other;
+              const label = TOPIC_LABELS[secondary] ?? secondary;
+              return (
+                <span
+                  key={`sec-${secondary}`}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-medium rounded-full px-2.5 py-0.5 border"
+                  style={{ color, borderColor: color + "55", backgroundColor: color + "10" }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+                  Also in {label}
+                </span>
+              );
+            })}
+            {pin.tags?.map((tag) => (
               <span
                 key={tag}
                 className="text-[11px] text-ink-soft bg-paper-sunken border border-rule rounded-full px-2.5 py-0.5"

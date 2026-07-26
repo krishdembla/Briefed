@@ -30,7 +30,7 @@ export async function GET(
 
   const { data: pins, error: pinsErr } = await supabase
     .from("pins")
-    .select("id, headline, summary, stat_1, stat_2, stat_3, topic, source_name, source_url, published_at, lat, lng, country_code, region_label")
+    .select("id, headline, summary, stat_1, stat_2, stat_3, topic, topics, source_name, source_url, published_at, lat, lng, country_code, region_label")
     .in("id", relatedIds)
     .order("published_at", { ascending: false });
 

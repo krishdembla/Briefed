@@ -41,7 +41,12 @@ CREATE TABLE IF NOT EXISTS pins (
   region_label   text,
 
   -- Taxonomy
+  -- `topic` is the primary/canonical topic (drives map pin colour + headline
+  -- pill). `topics` is the full set (1-2 entries, primary at index 0) —
+  -- introduced by 20260726_multi_topic.sql so a pin can surface in multiple
+  -- topic tabs without duplicating rows.
   topic          text CHECK (topic IN ('politics', 'economy', 'climate', 'conflict', 'health', 'tech', 'sports', 'other')),
+  topics         text[] NOT NULL DEFAULT '{}',
 
   -- Pipeline bookkeeping
   pipeline_run_id  uuid REFERENCES pipeline_runs(id),
@@ -54,6 +59,7 @@ CREATE TABLE IF NOT EXISTS pins (
 CREATE INDEX IF NOT EXISTS pins_published_at_idx ON pins (published_at DESC);
 CREATE INDEX IF NOT EXISTS pins_geo_idx          ON pins (lat, lng) WHERE lat IS NOT NULL;
 CREATE INDEX IF NOT EXISTS pins_topic_idx        ON pins (topic);
+CREATE INDEX IF NOT EXISTS pins_topics_gin_idx   ON pins USING GIN (topics);
 CREATE INDEX IF NOT EXISTS pins_run_idx          ON pins (pipeline_run_id);
 
 -- Row Level Security

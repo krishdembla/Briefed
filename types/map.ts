@@ -11,6 +11,9 @@ export interface MapPin {
   why_it_matters: string | null;
   og_image_url: string | null;
   topic: PinTopic | null;
+  // Full topic set (1-2 entries, primary at index 0). Same content as `topic`
+  // for legacy rows; extends to secondary topics for multi-topic pins.
+  topics: PinTopic[];
   tags: string[] | null;
   source_name: string;
   source_url: string;

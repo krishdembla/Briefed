@@ -21,7 +21,10 @@ export interface AISummary {
   stat1: string;
   stat2: string;
   stat3: string;
+  // `topic` is the primary/canonical topic (drives colour + label).
+  // `topics` is the full set (1-2 entries, primary always at index 0).
   topic: PinTopic;
+  topics: PinTopic[];
   why_it_matters: string;
   tags: string[];
 }
@@ -54,6 +57,7 @@ export interface Pin {
   country_code: string | null;
   region_label: string | null;
   topic: PinTopic | null;
+  topics: PinTopic[];
   tags: string[] | null;
   // Market-impact classification (feature 2). Empty tickers + market_relevance
   // "none" is the default when the pre-filter skips the classifier entirely.
