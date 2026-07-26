@@ -134,7 +134,10 @@ export default function FeedPanel({
   return (
     <div className="flex flex-col h-full bg-paper border-r border-rule">
       {/* Masthead header */}
-      <div className="shrink-0 px-5 pt-5 pb-3 bg-paper/90 backdrop-blur-md border-b border-rule">
+      <div
+        className="shrink-0 px-5 pt-5 pb-3 bg-paper/90 backdrop-blur-md border-b border-rule"
+        style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top, 0px))" }}
+      >
         <div className="flex items-baseline justify-between mb-3.5">
           <h1 className="font-serif text-2xl tracking-tight text-ink">Briefed</h1>
           <span className="text-[11px] uppercase tracking-[0.15em] text-ink-faint tnum">
@@ -320,7 +323,10 @@ export default function FeedPanel({
             scrollRoot={scrollRoot}
           />
         ))}
-        <div className="h-16" />
+        <div
+          className="h-16 md:h-16"
+          style={{ height: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}
+        />
       </div>
     </div>
   );
