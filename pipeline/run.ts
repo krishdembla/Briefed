@@ -154,9 +154,10 @@ export async function runPipeline(): Promise<PipelineResult> {
           pins.push(result.value);
           if (result.value.ai_processed) pinsAiDone++;
         } else {
-          const msg = `Failed to process article "${batch[j].headline.slice(0, 60)}": ${result.reason}`;
+          const headline = batch[j]?.headline?.slice(0, 60) ?? "(unknown)";
+          const msg = `Failed to process article "${headline}": ${result.reason}`;
           console.error(`[pipeline] ${msg}`);
-          Sentry.captureException(result.reason, { extra: { headline: batch[j].headline } });
+          Sentry.captureException(result.reason, { extra: { headline: batch[j]?.headline } });
           errors.push(msg);
         }
       }

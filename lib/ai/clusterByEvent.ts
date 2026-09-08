@@ -56,7 +56,9 @@ async function clusterChunk(chunk: RawArticle[]): Promise<RawArticle[]> {
     if (!Array.isArray(results)) throw new Error("Expected JSON array");
 
     const kept = results.filter((r) => {
-      if (r.keepIndex < 0 || r.keepIndex >= chunk.length) return false;
+      // Number.isInteger guards against null/undefined/float keepIndex values that pass
+      // numeric bounds checks but evaluate to undefined when used as array indices.
+      if (!Number.isInteger(r.keepIndex) || r.keepIndex < 0 || r.keepIndex >= chunk.length) return false;
       if (r.importance < IMPORTANCE_THRESHOLD) {
         console.log(`[clusterByEvent] Dropped (${r.importance}): "${chunk[r.keepIndex].headline.slice(0, 60)}"`);
         return false;
@@ -64,7 +66,7 @@ async function clusterChunk(chunk: RawArticle[]): Promise<RawArticle[]> {
       return true;
     });
 
-    return kept.map((r) => chunk[r.keepIndex]);
+    return kept.map((r) => chunk[r.keepIndex]).filter((a): a is RawArticle => a !== undefined);
   } catch (err) {
     console.error("[clusterByEvent] Chunk failed, keeping all articles in chunk:", err);
     // Fallback: keep everything in this chunk rather than losing it entirely
